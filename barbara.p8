@@ -3,6 +3,11 @@ version 32
 __lua__
 function _init()
   game_init()
+  DEBUG_MSG = ""
+  SCROLL_SPEED = 1
+  -- flag definitions
+  map_x = 0
+  init_witch()
 end
 
 function _update()
@@ -23,26 +28,85 @@ end
 
 
 function game_update()
+  w:update()
 end
 
 function game_draw()
   cls()
+  map()
+
+  w:draw()
+  draw_hp()
 end
 
 
+-- drawing
+function draw_hp()
+  -- set the right colors to transparent
+  palt(0, false)
+  palt(15, true)
+
+  -- first draw the full hearts.
+  local i = 0
+  while i < w.hp do
+    spr(48, i * 8 + 1, 1)
+    i += 1
+  end
+
+  -- then draw the empty ones.
+  while i < 3 do
+    spr(49, i * 8 + 1, 1)
+    i += 1
+  end
+  palt()
+end
+
+-- objects
+function init_witch()
+  local update_witch = function(self)
+    self.iframes -= 1
+    self.iframes = max(0, self.iframes)
+
+    -- animate the witch
+    animate(self)
+
+  end
+
+  local draw_witch = function(self)
+    spr(self.sprites[self.frame], 10, 10)
+  end
+
+  w = {
+    sprites = {1, 2, 3},
+    tick = 0,
+    frame = 1,
+    step = 6,
+    hitbox = {x = 0, y = 0, w = 8, h = 8},
+    hp = 3,
+    iframes = 0,
+    update = update_witch,
+    draw = draw_witch,
+  }
+end
+
 -- utilities
+function animate(self)
+  self.tick=(self.tick+1)%self.step --tick fwd
+  if (self.tick==0) self.frame=self.frame%#self.sprites+1
+end
+
 function collide(obj1, obj2)
   -- check if the object1's coordinates are inside
   -- the object2, therefore hitting it.
   -- take their respective hitboxes into consideration
-    if
-      obj1.x+obj1.hitbox.x+obj1.hitbox.w > obj2.x+obj2.hitbox.x and
-      obj1.y+obj1.hitbox.y+obj1.hitbox.h > obj2.y+obj2.hitbox.y and
-      obj1.x+obj1.hitbox.x < obj2.x+obj2.hitbox.x+obj2.hitbox.w and
-      obj1.y+obj1.hitbox.y < obj2.y+obj2.hitbox.y+obj2.hitbox.h
-    then
-      return true
-    end
+  if
+    obj1.x+obj1.hitbox.x+obj1.hitbox.w > obj2.x+obj2.hitbox.x and
+    obj1.y+obj1.hitbox.y+obj1.hitbox.h > obj2.y+obj2.hitbox.y and
+    obj1.x+obj1.hitbox.x < obj2.x+obj2.hitbox.x+obj2.hitbox.w and
+    obj1.y+obj1.hitbox.y < obj2.y+obj2.hitbox.y+obj2.hitbox.h
+  then
+    return true
+  end
 end
 
 __gfx__
@@ -51,10 +115,9 @@ __gfx__
 0070070000eefff000eefff0000efff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000a000cc00a000cc00a000cc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000aa0cccc0aa0cccc0aa0cccc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700aaacccfaaaacccfaaaacccfa000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000aaacccfaaaacccfaaaacccfa000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000aa00cc00a900cc00a900cc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000a00fc000900fc000a00fc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
