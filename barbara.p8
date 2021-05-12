@@ -72,13 +72,48 @@ function init_witch()
     -- animate the witch
     animate(self)
 
+    local accel = 0.5
+    local friction = 0.9
+
+    if(btn(0)) then
+      self.dx -= accel
+    elseif(btn(1)) then
+      self.dx += accel
+    end
+
+    if(btn(2)) then
+      self.dy -= accel
+    elseif(btn(3)) then
+      self.dy += accel
+    end
+
+    self.dx *= friction
+    self.dy *= friction
+    self.x += self.dx
+    self.y += self.dy
+
+    if (self.x < 0 or self.x > 120) then
+      self.dx = 0
+    end
+
+    if (self.y < 0 or self.y > 120) then
+      self.dy = 0
+    end
+
+    self.x = mid(0, self.x, 120)
+    self.y = mid(0, self.y, 120)
   end
 
   local draw_witch = function(self)
-    spr(self.sprites[self.frame], 10, 10)
+    spr(self.sprites[self.frame], self.x, self.y)
   end
 
   w = {
+    x = 10,
+    y = 10,
+    dx = 0,
+    dy = 0,
+    accel = 0.5,
     sprites = {1, 2, 3},
     tick = 0,
     frame = 1,
