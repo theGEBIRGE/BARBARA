@@ -72,7 +72,7 @@ function init_witch()
     -- animate the witch
     animate(self)
 
-    local accel = 0.5
+    local accel = 0.3
     local friction = 0.9
 
     if(btn(0)) then
@@ -101,7 +101,7 @@ function init_witch()
     end
 
     self.x = mid(0, self.x, 120)
-    self.y = mid(0, self.y, 120)
+    self.y = mid(8, self.y, 120)
   end
 
   local draw_witch = function(self)
