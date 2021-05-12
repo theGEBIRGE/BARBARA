@@ -29,6 +29,22 @@ function game_draw()
   cls()
 end
 
+
+-- utilities
+function collide(obj1, obj2)
+  -- check if the object1's coordinates are inside
+  -- the object2, therefore hitting it.
+  -- take their respective hitboxes into consideration
+    if
+      obj1.x+obj1.hitbox.x+obj1.hitbox.w > obj2.x+obj2.hitbox.x and
+      obj1.y+obj1.hitbox.y+obj1.hitbox.h > obj2.y+obj2.hitbox.y and
+      obj1.x+obj1.hitbox.x < obj2.x+obj2.hitbox.x+obj2.hitbox.w and
+      obj1.y+obj1.hitbox.y < obj2.y+obj2.hitbox.y+obj2.hitbox.h
+    then
+      return true
+    end
+end
+
 __gfx__
 000000000000eee00000eee00000eee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000eeff000eeeff000eeeff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
