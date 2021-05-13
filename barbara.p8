@@ -6,11 +6,18 @@ __lua__
 function _init()
   game_init()
   DEBUG_MSG = ""
-  SCROLL_SPEED = 1
+  SCROLL_SPEED = 0.5
   -- flag definitions
   f_floor = 0
-  map_x = 0
+  -- a negative position scrolls the map
+  scroll_x = 0
+  -- the current position on the map (in tiles, not pixels)
+  -- takes scrolling into account.
+  -- used for spawning enemies at specific points.
+  spawn_x = 0
+  prev_spawn_x = 0
   init_witch()
+  init_enemies()
 end
 
 function _update60()
@@ -31,12 +38,25 @@ end
 
 
 function game_update()
+  -- we calculate where the right edge of the screen
+  -- would be if we would travel the map continously.
+  spawn_x = flr(abs(scroll_x) / 8) + 16
+
+  -- add enemies only *once* per map tile
+  if (spawn_x != prev_spawn_x) then
+    prev_spawn_x = spawn_x
+    foreach(all_e[spawn_x], function(e) add(curr_e, e)  end)
+  end
+
+  foreach(curr_e, function(e) e:update() end)
+
   update_map()
   w:update()
 end
 
 function game_draw()
   draw_map()
+  foreach(curr_e, function(e) e:draw() end)
   w:draw()
   draw_hp()
   print(DEBUG_MSG)
@@ -44,7 +64,7 @@ end
 
 -- updating
 function update_map()
-  map_x -= 0.5
+  scroll_x -= SCROLL_SPEED
 end
 
 -- drawing
@@ -53,7 +73,7 @@ function draw_map()
   -- draw the moon
   map(0, 0, 90, 9, 8, 8)
   -- map(0, 0, 0, 9, 16, 16)
-  map(0, 4, map_x, 4*8)
+  map(0, 4, scroll_x, 4*8)
 end
 
 function draw_hp()
@@ -143,12 +163,68 @@ function init_witch()
     sprites = {1, 2, 3},
     tick = 0,
     frame = 1,
-    step = 6,
+    step = 8,
     hitbox = {x = 0, y = 0, w = 8, h = 8},
     hp = 3,
     iframes = 200,
     update = update_witch,
     draw = draw_witch,
+  }
+end
+
+
+function init_enemies()
+  curr_e = {}
+
+  all_e = {
+    [20] = {make_bird(25, 0.5)},
+    [23] = {make_bird(55, 0.5), make_bird(75, 1.0)},
+    [30] = {make_bird(55, 0.5)},
+  }
+end
+
+function update_bird(self)
+  self.x -= self.speed
+  if (self.x < - 8) then del(curr_e, self); return end
+  animate(self)
+
+  if (self.y_dir == "UP") then
+    self.y -= self.speed
+  end
+
+  if (self.y_dir == "DOWN") then
+    self.y += self.speed
+  end
+
+  if (self.y >= self.base_y + 10 ) then
+    self.y_dir = "UP"
+  end
+
+  if (self.y <= self.base_y - 10) then
+    self.y_dir = "DOWN"
+  end
+end
+
+function draw_bird(self)
+  spr(self.sprites[self.frame], self.x, self.y)
+end
+
+function make_bird(_y, _speed)
+  return {
+    tick = 0,
+    frame = 1,
+    step = 6,
+    sprites = {64, 65, 66},
+    base_y = _y,
+    -- always spawn just outside the view port
+    x = 128,
+    y = _y,
+    x_dir = 0,
+    y_dir = "DOWN",
+    speed = _speed,
+    hitbox = {x = 0, y = 0, w = 8, h = 8},
+    update = update_bird,
+    draw = draw_bird,
   }
 end
 
