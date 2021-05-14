@@ -42,10 +42,18 @@ function game_update()
     foreach(all_e[spawn_x], function(e) add(curr_e, e)  end)
   end
 
+  w:update()
   foreach(curr_e, function(e) e:update() end)
 
+  for e in all(curr_e) do
+    if (collide(w, e) and w.iframes == 0) then
+      sfx(0)
+      w.hp -= 1
+      w.iframes = 60
+    end
+  end
+
   update_map()
-  w:update()
 end
 
 function game_draw()
@@ -158,9 +166,8 @@ function init_witch()
     tick = 0,
     frame = 1,
     step = 8,
-    hitbox = {x = 0, y = 0, w = 8, h = 8},
     hp = 3,
-    iframes = 200,
+    iframes = 0,
     update = update_witch,
     draw = draw_witch,
   }
@@ -216,7 +223,6 @@ function make_bird(_y, _speed)
     x_dir = 0,
     y_dir = "DOWN",
     speed = _speed,
-    hitbox = {x = 0, y = 0, w = 8, h = 8},
     update = update_bird,
     draw = draw_bird,
   }
@@ -231,12 +237,11 @@ end
 function collide(obj1, obj2)
   -- check if the object1's coordinates are inside
   -- the object2, therefore hitting it.
-  -- take their respective hitboxes into consideration
   if
-    obj1.x+obj1.hitbox.x+obj1.hitbox.w > obj2.x+obj2.hitbox.x and
-    obj1.y+obj1.hitbox.y+obj1.hitbox.h > obj2.y+obj2.hitbox.y and
-    obj1.x+obj1.hitbox.x < obj2.x+obj2.hitbox.x+obj2.hitbox.w and
-    obj1.y+obj1.hitbox.y < obj2.y+obj2.hitbox.y+obj2.hitbox.h
+    obj1.x + 8 > obj2.x and
+    obj1.y + 8 > obj2.y and
+    obj1.x < obj2.x + 8 and
+    obj1.y < obj2.y + 8
   then
     return true
   end
@@ -360,4 +365,4 @@ b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1
 b2b0b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b0b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b0b2b2b2b2b2b2b2b2b2b2b2b2b2
 b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b0b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b0b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b0
 __sfx__
-00010000000001b050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00010000000003905024050200502f0502f0502e0502d0502c0502b0502a05029050280502805027050250500000024050220500e050200501f0501d0501c0501a05018050170500000000000000000000000000
