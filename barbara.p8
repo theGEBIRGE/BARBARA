@@ -20,12 +20,6 @@ function _init()
   init_enemies()
 end
 
-function _update60()
-end
-
-function _draw()
-end
-
 function game_init()
   _update60 = game_update
   _draw = game_draw
