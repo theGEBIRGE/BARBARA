@@ -18,6 +18,7 @@ function _init()
   prev_spawn_x = 0
   init_witch()
   init_enemies()
+  init_ingredients()
 end
 
 function game_init()
@@ -54,10 +55,12 @@ function game_update()
   if (spawn_x != prev_spawn_x) then
     prev_spawn_x = spawn_x
     foreach(all_e[spawn_x], function(e) add(curr_e, e)  end)
+    foreach(all_i[spawn_x], function(i) add(curr_i, i)  end)
   end
 
   w:update()
   foreach(curr_e, function(e) e:update() end)
+  foreach(curr_i, function(i) i:update() end)
 
   for e in all(curr_e) do
     if (collide(w, e) and w.iframes == 0) then
@@ -76,6 +79,7 @@ end
 function game_draw()
   draw_map()
   foreach(curr_e, function(e) e:draw() end)
+  foreach(curr_i, function(i) i:draw() end)
   w:draw()
   draw_hp()
   print(DEBUG_MSG)
@@ -190,6 +194,45 @@ function init_witch()
     iframes = 0,
     update = update_witch,
     draw = draw_witch,
+  }
+end
+
+function init_ingredients()
+  curr_i = {}
+  all_i = {
+    [20] = {make_ingredient(15, 80)}
+  }
+end
+
+function update_ingredient(self)
+  -- change the state ever half a second
+  if (self.ticks % 30 == 0) then
+    self.state = ((self.state + 1) % 3) + 1
+  end
+  self.x -= SCROLL_SPEED
+  self.ticks += 1
+end
+
+function draw_ingredient(self)
+  spr(self.spr, self.x, self.y)
+  if (self.state == 1) then
+    circ(self.x+5, self.y+3, 5, 8)
+  elseif (self.state == 2) then
+    circ(self.x+5, self.y+3, 4, 9)
+  else
+    circ(self.x+5, self.y+3, 3, 10)
+  end
+end
+
+function make_ingredient(_spr, _y)
+  return {
+    x = 128,
+    y = _y,
+    spr = _spr,
+    ticks = 0,
+    state = 0,
+    update = update_ingredient,
+    draw = draw_ingredient
   }
 end
 
@@ -317,8 +360,8 @@ function animate(self)
 function update_ghost(self)
   animate(self)
 
-  if (self.ticks % 20 == 0) then
-    local tmp_x = self.x - flr(rnd(20))
+  if (self.ticks % 60 == 0) then
+    local tmp_x = self.x - (flr(rnd(20)) + 10)
     self.x = tmp_x
 
     local tmp_y
