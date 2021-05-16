@@ -206,8 +206,8 @@ end
 
 function update_ingredient(self)
   -- change the state ever half a second
-  if (self.ticks % 30 == 0) then
-    self.state = ((self.state + 1) % 3) + 1
+  if (self.ticks % 40 == 0) then
+    self.highlight =  not self.highlight
   end
   self.x -= SCROLL_SPEED
   self.ticks += 1
@@ -215,12 +215,8 @@ end
 
 function draw_ingredient(self)
   spr(self.spr, self.x, self.y)
-  if (self.state == 1) then
-    circ(self.x+5, self.y+3, 5, 8)
-  elseif (self.state == 2) then
-    circ(self.x+5, self.y+3, 4, 9)
-  else
-    circ(self.x+5, self.y+3, 3, 10)
+  if (self.highlight) then
+    circ(self.x+5, self.y+3, 4, 8)
   end
 end
 
@@ -230,7 +226,7 @@ function make_ingredient(_spr, _y)
     y = _y,
     spr = _spr,
     ticks = 0,
-    state = 0,
+    highlight = false,
     update = update_ingredient,
     draw = draw_ingredient
   }
