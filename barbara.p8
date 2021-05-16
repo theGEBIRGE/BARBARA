@@ -45,15 +45,15 @@ function game_over_draw()
   print("PRESS ❎ TO CONTINUE")
 end
 
-
 function game_update()
   -- we calculate where the right edge of the screen
   -- would be if we would travel the map continously.
   spawn_x = flr(abs(scroll_x) / 8) + 16
 
-  -- add enemies only *once* per map tile
+  -- add objects only *once* per map tile
   if (spawn_x != prev_spawn_x) then
     prev_spawn_x = spawn_x
+
     foreach(all_e[spawn_x], function(e) add(curr_e, e)  end)
     foreach(all_i[spawn_x], function(i) add(curr_i, i)  end)
   end
@@ -72,6 +72,14 @@ function game_update()
       w.iframes = 60
     end
   end
+
+  -- check for pick ups
+  for i in all(curr_i) do
+    if (collide(w, i)) then
+      del(curr_i, i)
+    end
+  end
+
 
   update_map()
 end
