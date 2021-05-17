@@ -73,13 +73,14 @@ function game_update()
     end
   end
 
-  -- check for pick ups
+  -- check for ingredient pick ups
   for i in all(curr_i) do
     if (collide(w, i)) then
       del(curr_i, i)
     end
   end
 
+  DEBUG_MSG = #curr_i
 
   update_map()
 end
@@ -213,6 +214,9 @@ function init_ingredients()
 end
 
 function update_ingredient(self)
+  if (self.x < 0) then
+    del(curr_i, self)
+  end
   -- change the state ever half a second
   if (self.ticks % 40 == 0) then
     self.highlight =  not self.highlight
