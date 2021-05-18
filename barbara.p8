@@ -3,39 +3,129 @@ version 32
 __lua__
 -- BABARA
 -- by GEBIRGE
+
+function change_stage()
+  -- change from forrest to the cave
+  if (CURRENT_STAGE == 0) then
+    --TODO: We can run any transition code in here.
+    CURRENT_STAGE = 0
+    DEBUG_MSG = "HELLO"
+    game_init()
+  end
+end
+
 function _init()
-  game_init()
   DEBUG_MSG = ""
   -- flag definitions
   f_floor = 0
-  --
   SCROLL_SPEED = 0.5
-  foreground_x = 0
-  background1_x =  0
-  background2_x = 0
-  background3_x = 128
-  -- the current position on the map (in tiles, not pixels)
-  -- takes scrolling into account.
-  -- used for spawning objects at specific points.
-  spawn_x = 0
-  prev_spawn_x = 0
-  -- the maps are looping, so their x-coordinates
-  -- can't be used for calculating our spawn points.
-  -- we need an ever-increasing counter
-  abs_x = 0
+  CURRENT_STAGE = 0
+  --
   init_witch()
+
   init_enemies()
   init_ingredients()
+
+  stages = {
+    [0] = {
+      foreground_x = 0,
+      background1_x =  0,
+      background2_x = 0,
+      background3_x = 128,
+      -- the current position on the map (in tiles, not pixels)
+      -- takes scrolling into account.
+      -- used for spawning objects at specific points.
+      spawn_x = 0,
+      prev_spawn_x = 0,
+      -- the maps are looping, so their x-coordinates
+      -- can't be used for calculating our spawn points.
+      -- we need an ever-increasing counter
+      abs_x = 0,
+
+      update = function(self)
+        -- we calculate where the right edge of the screen
+        -- would be if we would travel the map continously.
+        self.spawn_x = flr(self.abs_x / 8) + 16
+
+        if (self.spawn_x == 210) change_stage()
+
+        -- add objects only *once* per map tile
+        if (self.spawn_x != self.prev_spawn_x) then
+          self.prev_spawn_x = self.spawn_x
+
+          foreach(all_e[self.spawn_x], function(e) add(curr_e, e)  end)
+          foreach(all_i[self.spawn_x], function(i) add(curr_i, i)  end)
+        end
+
+        w:update()
+        foreach(curr_e, function(e) e:update() end)
+        foreach(curr_i, function(i) i:update() end)
+
+        for e in all(curr_e) do
+          if (collide(w, e) and w.iframes == 0) then
+            sfx(0)
+            w.hp -= 1
+            if (w.hp <= 0) then
+              game_over_init()
+            end
+            w.iframes = 60
+          end
+        end
+
+        -- check for ingredient pick ups
+        for i in all(curr_i) do
+          if (collide(w, i)) then
+            del(curr_i, i)
+          end
+        end
+
+        self:update_map()
+      end,
+
+      update_map = function(self)
+        self.foreground_x -= SCROLL_SPEED
+        self.abs_x += SCROLL_SPEED
+        self.background1_x -= 0.25
+        self.background2_x -= 0.1
+        self.background3_x -= 0.05
+        -- the foreground map is 4 screens wide
+        if (self.foreground_x <  -128*4) self.foreground_x = 0
+        -- the backgrounds are each 1 screen wide
+        if (self.background1_x < -127) self.background1_x = 0
+        if (self.background2_x < -127) self.background2_x = 0
+        end,
+
+      draw = function(self)
+        self:draw_map()
+        foreach(curr_e, function(e) e:draw() end)
+        foreach(curr_i, function(i) i:draw() end)
+        w:draw()
+        draw_hp()
+      end,
+
+      draw_map = function(self)
+        cls(12)
+        map(96, 0, self.background3_x, 0, 32, 16)
+        map(80, 0, self.background2_x, 0, 16, 16)
+        map(80, 0, self.background2_x + 128, 0, 16, 16)
+        map(64, 0, self.background1_x + 128, 0, 16, 16)
+        map(64, 0, self.background1_x, 0, 16, 16)
+        palt(0, false)
+        palt(8, true)
+        map(0, 0, self.foreground_x, 0, 64, 16)
+        map(0, 0, self.foreground_x + 128 * 4, 0, 64, 16)
+        palt()
+      end
+    }
+  }
+
+  game_init()
 end
+
 
 function game_init()
   _update60 = game_update
   _draw = game_draw
-end
-
-function menu_init()
-  _update60 = menu_update
-  _draw = menu_draw
 end
 
 function game_over_init()
@@ -53,81 +143,15 @@ function game_over_draw()
 end
 
 function game_update()
-  -- we calculate where the right edge of the screen
-  -- would be if we would travel the map continously.
-  spawn_x = flr(abs_x / 8) + 16
-
-  -- add objects only *once* per map tile
-  if (spawn_x != prev_spawn_x) then
-    prev_spawn_x = spawn_x
-
-    foreach(all_e[spawn_x], function(e) add(curr_e, e)  end)
-    foreach(all_i[spawn_x], function(i) add(curr_i, i)  end)
-  end
-
-  w:update()
-  foreach(curr_e, function(e) e:update() end)
-  foreach(curr_i, function(i) i:update() end)
-
-  for e in all(curr_e) do
-    if (collide(w, e) and w.iframes == 0) then
-      sfx(0)
-      w.hp -= 1
-      if (w.hp <= 0) then
-        game_over_init()
-      end
-      w.iframes = 60
-    end
-  end
-
-  -- check for ingredient pick ups
-  for i in all(curr_i) do
-    if (collide(w, i)) then
-      del(curr_i, i)
-    end
-  end
-
-  update_map()
+  stages[CURRENT_STAGE]:update()
 end
 
 function game_draw()
-  draw_map()
-  foreach(curr_e, function(e) e:draw() end)
-  foreach(curr_i, function(i) i:draw() end)
-  w:draw()
-  draw_hp()
+  stages[CURRENT_STAGE]:draw()
   print(DEBUG_MSG)
 end
 
--- updating
-function update_map()
-  foreground_x -= SCROLL_SPEED
-  abs_x += SCROLL_SPEED
-  background1_x -= 0.25
-  background2_x -= 0.1
-  background3_x -= 0.05
-  -- the foreground map is 4 screens wide
-  if (foreground_x <  -128*4) foreground_x = 0
-  -- the backgrounds are each 1 screen wide
-  if (background1_x < -127) background1_x = 0
-  if (background2_x < -127) background2_x = 0
-end
-
 -- drawing
-function draw_map()
-  cls(12)
-  map(96, 0, background3_x, 0, 32, 16)
-  map(80, 0, background2_x, 0, 16, 16)
-  map(80, 0, background2_x + 128, 0, 16, 16)
-  map(64, 0, background1_x + 128, 0, 16, 16)
-  map(64, 0, background1_x, 0, 16, 16)
-  palt(0, false)
-  palt(8, true)
-  map(0, 0, foreground_x, 0, 64, 16)
-  map(0, 0, foreground_x + 128 * 4, 0, 64, 16)
-  palt()
-end
-
 function draw_hp()
   -- set the right colors to transparent
   palt(0, false)
