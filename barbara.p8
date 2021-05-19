@@ -4,30 +4,37 @@ __lua__
 -- BABARA
 -- by GEBIRGE
 
-function change_stage()
-  -- change from forrest to the cave
-  if (CURRENT_STAGE == 0) then
-    --TODO: We can run any transition code in here.
-    CURRENT_STAGE = 0
-    DEBUG_MSG = "HELLO"
-    game_init()
-  end
-end
-
 function _init()
   DEBUG_MSG = ""
   -- flag definitions
   f_floor = 0
-  SCROLL_SPEED = 0.5
-  CURRENT_STAGE = 0
-  --
-  init_witch()
 
+  SCROLL_SPEED = 0.5
+  CURRENT_STATE = "STAGE1"
+  init_gameloop()
+  init_witch()
   init_enemies()
   init_ingredients()
 
-  stages = {
-    [0] = {
+  game_states = {
+    ["GAMEOVER"] = {
+    update = function()
+      if(btn(5)) _init()
+    end,
+    draw = function()
+      cls()
+      print("PRESS ❎ TO CONTINUE")
+    end
+    },
+    ["POST_STAGE1"] = {
+      update = function() end,
+      draw = function()
+        cls(12)
+        print("HEY THERE", 10, 10, 3)
+      end
+    },
+
+    ["STAGE1"] = {
       foreground_x = 0,
       background1_x =  0,
       background2_x = 0,
@@ -47,7 +54,7 @@ function _init()
         -- would be if we would travel the map continously.
         self.spawn_x = flr(self.abs_x / 8) + 16
 
-        if (self.spawn_x == 210) change_stage()
+        -- if (self.spawn_x == 23) CURRENT_STATE = "POST_STAGE1"
 
         -- add objects only *once* per map tile
         if (self.spawn_x != self.prev_spawn_x) then
@@ -66,7 +73,7 @@ function _init()
             sfx(0)
             w.hp -= 1
             if (w.hp <= 0) then
-              game_over_init()
+              CURRENT_STATE = "GAMEOVER"
             end
             w.iframes = 60
           end
@@ -119,35 +126,19 @@ function _init()
     }
   }
 
-  game_init()
 end
 
-
-function game_init()
+function init_gameloop()
   _update60 = game_update
   _draw = game_draw
 end
 
-function game_over_init()
-  _update60 = game_over_update
-  _draw = game_over_draw
-end
-
-function game_over_update()
-  if(btn(5)) _init()
-end
-
-function game_over_draw()
-  cls()
-  print("PRESS ❎ TO CONTINUE")
-end
-
 function game_update()
-  stages[CURRENT_STAGE]:update()
+  game_states[CURRENT_STATE]:update()
 end
 
 function game_draw()
-  stages[CURRENT_STAGE]:draw()
+  game_states[CURRENT_STATE]:draw()
   print(DEBUG_MSG)
 end
 
@@ -295,6 +286,7 @@ function init_enemies()
 
   all_e = {
     [18] = {make_snake(96, 0.5)},
+    [19] = {make_bat(55, 2), make_bat(75, 1)},
     [20] = {make_bird(25, 1.0)},
     [23] = {make_bird(55, 1.0), make_snake(96, 1.0)},
     [30] = {make_bird(55, 1.0)},
