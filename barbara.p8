@@ -1,10 +1,12 @@
 pico-8 cartridge // http://www.pico-8.com
 version 32
 __lua__
--- BABARA
--- by GEBIRGE
+-- BARBARA
+-- by Frederic Linn
 
 function _init()
+  fadedir = 1
+  fadepos = 0
   DEBUG_MSG = ""
   -- flag definitions
   f_floor = 0
@@ -17,7 +19,7 @@ function _init()
   init_ingredients()
 
   game_states = {
-    ["GAMEOVER"] = {
+    ["GAME_OVER"] = {
     update = function()
       if(btn(5)) _init()
     end,
@@ -26,17 +28,23 @@ function _init()
       print("PRESS ❎ TO CONTINUE")
     end
     },
+
     ["POST_STAGE1"] = {
-      update = function() end,
-      draw = function()
-        cls(12)
-        print("HEY THERE", 10, 10, 3)
+      irisd = -1,
+      irisi = 92,
+      update = function(self)
+        if (self.irisi == 0) change_state("GAME_OVER")
+      end,
+      draw = function(self)
+        local i, d = iris(self.irisi, self.irisd, 13)
+        self.irisi = i
+        self.irisd = d
       end
     },
 
     ["STAGE1"] = {
       foreground_x = 0,
-      background1_x =  0,
+      background1_x = 0,
       background2_x = 0,
       background3_x = 128,
       -- the current position on the map (in tiles, not pixels)
@@ -48,41 +56,58 @@ function _init()
       -- can't be used for calculating our spawn points.
       -- we need an ever-increasing counter
       abs_x = 0,
+      curr_e = {},
+      curr_i = {},
+
+      reset = function(self)
+        self.curr_e = {}
+        self.curr_i = {}
+        self.foreground_x = 0
+        self.background1_x = 0
+        self.background2_x = 0
+        self.background3_x = 128
+        self.spawn_x = 0
+        self.prev_spawn_x = 0
+        self.abs_x = 0
+        init_enemies()
+        init_ingredients()
+      end,
 
       update = function(self)
         -- we calculate where the right edge of the screen
         -- would be if we would travel the map continously.
         self.spawn_x = flr(self.abs_x / 8) + 16
 
-        -- if (self.spawn_x == 23) CURRENT_STATE = "POST_STAGE1"
+        DEBUG_MSG = self.spawn_x
+        if (self.spawn_x == 216) change_state("POST_STAGE1")
 
         -- add objects only *once* per map tile
         if (self.spawn_x != self.prev_spawn_x) then
           self.prev_spawn_x = self.spawn_x
 
-          foreach(all_e[self.spawn_x], function(e) add(curr_e, e)  end)
-          foreach(all_i[self.spawn_x], function(i) add(curr_i, i)  end)
+          foreach(all_e[self.spawn_x], function(e) add(self.curr_e, e)  end)
+          foreach(all_i[self.spawn_x], function(i) add(self.curr_i, i)  end)
         end
 
         w:update()
-        foreach(curr_e, function(e) e:update() end)
-        foreach(curr_i, function(i) i:update() end)
+        foreach(self.curr_e, function(e) e:update() end)
+        foreach(self.curr_i, function(i) i:update() end)
 
         for e in all(curr_e) do
           if (collide(w, e) and w.iframes == 0) then
             sfx(0)
             w.hp -= 1
             if (w.hp <= 0) then
-              CURRENT_STATE = "GAMEOVER"
+              change_state("GAME_OVER")
             end
             w.iframes = 60
           end
         end
 
         -- check for ingredient pick ups
-        for i in all(curr_i) do
+        for i in all(self.curr_i) do
           if (collide(w, i)) then
-            del(curr_i, i)
+            del(self.curr_i, i)
           end
         end
 
@@ -104,8 +129,8 @@ function _init()
 
       draw = function(self)
         self:draw_map()
-        foreach(curr_e, function(e) e:draw() end)
-        foreach(curr_i, function(i) i:draw() end)
+        foreach(self.curr_e, function(e) e:draw() end)
+        foreach(self.curr_i, function(i) i:draw() end)
         w:draw()
         draw_hp()
       end,
@@ -125,7 +150,6 @@ function _init()
       end
     }
   }
-
 end
 
 function init_gameloop()
@@ -139,7 +163,7 @@ end
 
 function game_draw()
   game_states[CURRENT_STATE]:draw()
-  print(DEBUG_MSG)
+  print(DEBUG_MSG, 100, 0)
 end
 
 -- drawing
@@ -242,7 +266,6 @@ function init_witch()
 end
 
 function init_ingredients()
-  curr_i = {}
   all_i = {
     [20] = {make_ingredient(15, 80)},
     [30] = {make_ingredient(31, 96)}
@@ -280,10 +303,7 @@ function make_ingredient(_spr, _y)
   }
 end
 
-
 function init_enemies()
-  curr_e = {}
-
   all_e = {
     [18] = {make_snake(96, 0.5)},
     [19] = {make_bat(55, 2), make_bat(75, 1)},
@@ -462,9 +482,27 @@ function collide(obj1, obj2)
   end
 end
 
-function get_spritesheet_pos(spr)
-  local sx, sy = (spr % 16) * 8, (spr \ 16) * 8
-  return sx, sy
+function change_state(next_state)
+  -- clean up if a function is provided
+  if(game_states[CURRENT_STATE].reset) then
+    game_states[CURRENT_STATE]:reset()
+  end
+  CURRENT_STATE = next_state
+end
+
+-- code by dw817
+-- https://www.lexaloffle.com/bbs/?tid=36250
+function iris(irisi, irisd, clr)
+  for i=91,irisi,-1 do
+    for j=63,65 do
+      circ(j,64,i,clr)
+    end
+  end
+  circ(64,64,irisi-1,5)
+  irisi+=irisd
+  if (irisi<0) irisd=0 irisi=0
+  if (irisi>92) irisd=0 irisi=92
+  return irisi, irisd
 end
 
 __gfx__
@@ -582,7 +620,7 @@ __map__
 000000000000000000000000000000000000000000a500a50000a500000000000000a500a50000a50000000000000000000000000000000000a500a50000a500000080a0a0a0a0a0a0a0a0a0a08100000082a1a1a1a1a1a1a1a1a1a1a1a18300000000000092a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3930000000000
 000000000000000000000000000000000000000000b500b50000b500000000000000b500b50000b50000000000000000000000000000000000b500b50000b5000080a0a0a0a0a0a0a0a0a0a0a0a0810082a1a1a1a1a1a1a1a1a1a1a1a1a1a1830000000092a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a39300000000
 b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b180a0a0a0a0a0a0a0a0a0a0a0a0a0a081a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a100000092a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a393000000
-b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b0b2b2b2b2b2b2b2b2b2b2b20000000000000000000000000000000000000000000000000000000000000000000092a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3930000
-b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b0b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b200000000000000000000000000000000000000000000000000000000000000000092a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a39300
+b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b0b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b20000000000000000000000000000000000000000000000000000000000000000000092a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3930000
+b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b0b2b2b2b2b2b2b2b200000000000000000000000000000000000000000000000000000000000000000092a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a39300
 __sfx__
 00010000156002f60035600326002e6002b600296002760024600236002360023600236001d60025600166000a600026000060000600006000160003600056000a600095000e6001260016600226000050000000
