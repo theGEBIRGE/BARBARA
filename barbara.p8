@@ -20,8 +20,7 @@ function _init()
   f_damage = 1
 
   SCROLL_SPEED = 0.5
-  CURRENT_STATE = "CAVE"
-  -- CURRENT_STATE = "CAVE"
+  CURRENT_STATE = "FORREST"
   init_gameloop()
   init_witch()
   init_enemies()
@@ -55,7 +54,7 @@ function _init()
       curr_e = {},
       curr_i = {},
 
-      reset = function(self)
+      init = function(self)
         self.curr_e = {}
         self.curr_i = {}
         self.map_x = 0
@@ -122,6 +121,10 @@ function _init()
     ["PRE_CAVE"] = {
       irisd = 1,
       irisi = 0,
+      init = function(self)
+        w.x = 100
+        w.y = 60
+      end,
       update = function(self)
         if (self.irisi == 92) change_state("CAVE")
       end,
@@ -133,6 +136,7 @@ function _init()
         map(64, 16, 0, 0, 16, 16)
         map(0, 16, 0, 0, 16, 16)
         palt()
+        w:draw()
         local i, d = iris(self.irisi, self.irisd, 13)
         self.irisi = i
         self.irisd = d
@@ -148,7 +152,7 @@ function _init()
       prev_spawn_x = 0,
       abs_x = 0,
 
-      reset = function(self)
+      init = function(self)
         self.curr_e = {}
         self.curr_i = {}
         self.map_x = 0
@@ -189,6 +193,7 @@ function _init()
       end
     },
   }
+  change_state("PRE_CAVE")
 end
 
 
@@ -201,8 +206,8 @@ function update_stage(self)
   if (self.spawn_x != self.prev_spawn_x) then
     self.prev_spawn_x = self.spawn_x
 
-    foreach(all_e[self.spawn_x], function(e) add(self.curr_e, e)  end)
-    foreach(all_i[self.spawn_x], function(i) add(self.curr_i, i)  end)
+    foreach(all_e[CURRENT_STATE][self.spawn_x], function(e) add(self.curr_e, e)  end)
+    foreach(all_i[CURRENT_STATE][self.spawn_x], function(i) add(self.curr_i, i)  end)
   end
 
   -- we need the absolute x-coordinate of the map (in pixels)
@@ -384,7 +389,13 @@ function init_witch()
 end
 
 function init_ingredients()
-  all_i = {
+  all_i = {}
+  all_i["FORREST"] = {
+    [20] = {make_ingredient(15, 80)},
+    [30] = {make_ingredient(31, 96)}
+  }
+
+  all_i["CAVE"] = {
     [20] = {make_ingredient(15, 80)},
     [30] = {make_ingredient(31, 96)}
   }
@@ -421,29 +432,27 @@ function make_ingredient(_spr, _y)
   }
 end
 
-function init_enemies(stage)
-    all_e = {
-      [18] = {make_snake(96, 0.5)},
-      [19] = {make_bat(55, 2), make_bat(75, 1)},
-      [20] = {make_bird(25, 1.0)},
-      [23] = {make_bird(55, 1.0), make_snake(96, 1.0)},
-      [30] = {make_bird(55, 1.0)},
-      -- [40] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-      -- [45] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-      -- [49] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-      -- [53] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-      -- [70] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-    }
-  -- elseif (stage == "CAVE") then
-  --   all_e = {
-  --     [40] = {make_bat(55, 0.75)},
-  --     [45] = {make_bat(55, 0.75)},
-  --     [49] = {make_bat(55, 0.75)},
-  --     [53] = {make_bat(55, 0.75)},
-  --     [70] = {make_bat(55, 0.75)},
-  --   }
-
-  -- end
+function init_enemies()
+  all_e = {}
+  all_e["FORREST"] = {
+    [18] = {make_snake(96, 0.5)},
+    [19] = {make_bat(55, 2), make_bat(75, 1)},
+    [20] = {make_bird(25, 1.0)},
+    [23] = {make_bird(55, 1.0), make_snake(96, 1.0)},
+    [30] = {make_bird(55, 1.0)},
+    -- [40] = {make_bat(55, 0.75), make_bird(75, 1.0)},
+    -- [45] = {make_bat(55, 0.75), make_bird(75, 1.0)},
+    -- [49] = {make_bat(55, 0.75), make_bird(75, 1.0)},
+    -- [53] = {make_bat(55, 0.75), make_bird(75, 1.0)},
+    -- [70] = {make_bat(55, 0.75), make_bird(75, 1.0)},
+  }
+  all_e["CAVE"] = {
+    [40] = {make_bat(55, 0.75)},
+    [45] = {make_bat(55, 0.75)},
+    [49] = {make_bat(55, 0.75)},
+    [53] = {make_bat(55, 0.75)},
+    [70] = {make_bat(55, 0.75)},
+  }
 end
 
 function update_bird(self)
@@ -612,8 +621,8 @@ end
 
 function change_state(next_state)
   -- clean up if a function is provided
-  if(game_states[CURRENT_STATE].reset) then
-    game_states[CURRENT_STATE]:reset()
+  if(game_states[next_state].init) then
+    game_states[next_state]:init()
   end
   CURRENT_STATE = next_state
 end
