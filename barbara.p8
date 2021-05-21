@@ -5,14 +5,23 @@ __lua__
 -- by FREDERIC LINN
 
 function _init()
+  -- the y-offset of the map per stage.
+  -- used for getting the correct map tile flags.
+  MAP_OFFSETS = {
+    ["FORREST"] = 0,
+    ["CAVE"] = 16,
+  }
+
   fadedir = 1
   fadepos = 0
   DEBUG_MSG = ""
   -- flag definitions
-  f_floor = 0
+  f_collision = 0
+  f_damage = 1
 
   SCROLL_SPEED = 0.5
-  CURRENT_STATE = "PRE_CAVE"
+  CURRENT_STATE = "CAVE"
+  -- CURRENT_STATE = "CAVE"
   init_gameloop()
   init_witch()
   init_enemies()
@@ -30,7 +39,7 @@ function _init()
     },
 
     ["FORREST"] = {
-      foreground_x = 0,
+      map_x = 0,
       background1_x = 0,
       background2_x = 0,
       background3_x = 128,
@@ -49,7 +58,7 @@ function _init()
       reset = function(self)
         self.curr_e = {}
         self.curr_i = {}
-        self.foreground_x = 0
+        self.map_x = 0
         self.background1_x = 0
         self.background2_x = 0
         self.background3_x = 128
@@ -62,14 +71,19 @@ function _init()
 
       update = update_stage,
 
+      check_next_state = function(self)
+        -- check if we reached the end of the forrest
+        if (self.spawn_x == 216) change_state("POST_FORREST")
+      end,
+
       update_map = function(self)
-        self.foreground_x -= SCROLL_SPEED
+        self.map_x -= SCROLL_SPEED
         self.abs_x += SCROLL_SPEED
         self.background1_x -= 0.25
         self.background2_x -= 0.1
         self.background3_x -= 0.05
         -- the foreground map is 4 screens wide
-        if (self.foreground_x <  -128*4) self.foreground_x = 0
+        if (self.map_x <  -128*4) self.map_x = 0
         -- the backgrounds are each 1 screen wide
         if (self.background1_x < -127) self.background1_x = 0
         if (self.background2_x < -127) self.background2_x = 0
@@ -86,8 +100,8 @@ function _init()
         map(64, 0, self.background1_x, 0, 16, 16)
         palt(0, false)
         palt(8, true)
-        map(0, 0, self.foreground_x, 0, 64, 16)
-        map(0, 0, self.foreground_x + 128 * 4, 0, 64, 16)
+        map(0, 0, self.map_x, 0, 64, 16)
+        map(0, 0, self.map_x + 128 * 4, 0, 64, 16)
         palt()
       end
     },
@@ -126,10 +140,10 @@ function _init()
     },
 
     ["CAVE"] = {
-      foreground_x = 0,
-      background1_x = 0,
       curr_e = {},
       curr_i = {},
+      map_x = 0,
+      background1_x = 0,
       spawn_x = 0,
       prev_spawn_x = 0,
       abs_x = 0,
@@ -137,9 +151,8 @@ function _init()
       reset = function(self)
         self.curr_e = {}
         self.curr_i = {}
-        self.foreground_x = 0
+        self.map_x = 0
         self.background1_x = 0
-        self.background2_x = 0
         self.spawn_x = 0
         self.prev_spawn_x = 0
         self.abs_x = 0
@@ -149,11 +162,16 @@ function _init()
 
       update = update_stage,
 
+      check_next_state = function(self)
+        -- if (self.spawn_x == 23) change_state("GAME_OVER")
+      end,
+
       update_map = function(self)
-        self.foreground_x -= SCROLL_SPEED
+        self.map_x -= SCROLL_SPEED
+        self.abs_x += SCROLL_SPEED
         self.background1_x -= 0.1
         -- the foreground map is 2 screens wide
-        if (self.foreground_x < -128*2) self.foreground_x = 0
+        if (self.map_x < -128*2) self.map_x = 0
         if (self.background1_x < -127) self.background1_x = 0
       end,
 
@@ -165,20 +183,19 @@ function _init()
         palt(7, true)
         map(64, 16, self.background1_x, 0, 16, 16)
         map(64, 16, self.background1_x + 128, 0, 16, 16)
-        map(0, 16, self.foreground_x, 0, 32, 16)
-        map(0, 16, self.foreground_x + 128 * 2, 0, 32, 16)
+        map(0, 16, self.map_x, 0, 32, 16)
+        map(0, 16, self.map_x + 128 * 2, 0, 32, 16)
         palt()
       end
     },
   }
 end
 
+
 function update_stage(self)
   -- we calculate where the right edge of the screen
   -- would be if we would travel the map continously.
   self.spawn_x = flr(self.abs_x / 8) + 16
-  -- check if we reached the end of the forrest
-  if (self.spawn_x == 216) change_state("POST_FORREST")
 
   -- add objects only *once* per map tile
   if (self.spawn_x != self.prev_spawn_x) then
@@ -188,11 +205,14 @@ function update_stage(self)
     foreach(all_i[self.spawn_x], function(i) add(self.curr_i, i)  end)
   end
 
-  w:update()
+  -- we need the absolute x-coordinate of the map (in pixels)
+  -- for collision detection.
+  w:update(abs(self.map_x))
+
   foreach(self.curr_e, function(e) e:update() end)
   foreach(self.curr_i, function(i) i:update() end)
 
-  for e in all(curr_e) do
+  for e in all(self.curr_e) do
     if (collide(w, e) and w.iframes == 0) then
       sfx(0)
       w.hp -= 1
@@ -211,6 +231,7 @@ function update_stage(self)
   end
 
   self:update_map()
+  self:check_next_state()
 end
 
 function draw_stage(self)
@@ -232,7 +253,7 @@ end
 
 function game_draw()
   game_states[CURRENT_STATE]:draw()
-  print(DEBUG_MSG, 100, 0)
+  print(DEBUG_MSG, 50, 0)
 end
 
 -- drawing
@@ -258,7 +279,7 @@ end
 
 -- objects
 function init_witch()
-  local update_witch = function(self)
+  local update_witch = function(self, map_x)
     self.iframes -= 1
     self.iframes = max(0, self.iframes)
 
@@ -287,10 +308,38 @@ function init_witch()
     tmp_x += self.dx
     tmp_y += self.dy
 
-    tile = mget((tmp_x + 1) / 8, (tmp_y + 7) / 8)
-    is_floor = fget(tile, f_floor)
+    -- we iterate over every map tile that's currently on screen
+    -- and see if barbara collides with any of them that have
+    -- our collision flag set.
+    local map_collision = false
+    local x_offset=flr(map_x/8)
+    local y_offset = MAP_OFFSETS[CURRENT_STATE]
 
-    if (not is_floor) then
+    for x=0,15 do
+      for y=0,15 do
+        local t = mget(x + x_offset, y + y_offset)
+        local c = fget(t, f_collision)
+        if (c) then
+          if
+            w.x + 6 > x*8 and
+            w.y + 6 > y*8 and
+            w.x < x*8 + 6 and
+            w.y < y*8 + 6
+          then
+            -- did we also take damage?
+            if (fget(t, f_damage)) then
+              DEBUG_MSG = "DAMAGE"
+            end
+            map_collision = true
+          end
+        end
+      end
+    end
+
+      -- TODO: Think about the bigger picture here:
+      -- Maybe we need the direction of barbara
+      -- to push her in the opposite one.
+    if (not map_collision) then
       -- reset the velocity if we hit the edges
       if (tmp_x < 0 or tmp_x > 120) then
         self.dx = 0
@@ -305,7 +354,7 @@ function init_witch()
 
     else
       -- we don't want to get stuck
-      self.y -= 0.2
+      self.y -= 0.4
       -- TODO: Maybe dust particles?
     end
   end
@@ -319,7 +368,7 @@ function init_witch()
 
   w = {
     x = 10,
-    y = 10,
+    y = 50,
     dx = 0,
     dy = 0,
     accel = 0.5,
@@ -682,7 +731,7 @@ fff77777f7777777fff7777700000000000000000000000000000000000000000000000000000000
 47070744449444444444444400000000000000004111444400000000000000000000000000000000000000000000000000000000000000000000000000000000
 44444444444444444444444400000000000000001881414100000000000000000000000000000000000000000000000000000000000000000000000000000000
 __gff__
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000030000000000000001000000000303030100000000000000000000000003000303000000000000000000000000030300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008788000000000000000000000000000000
