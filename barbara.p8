@@ -12,7 +12,7 @@ function _init()
   f_floor = 0
 
   SCROLL_SPEED = 0.5
-  CURRENT_STATE = "POST_FORREST"
+  CURRENT_STATE = "PRE_CAVE"
   init_gameloop()
   init_witch()
   init_enemies()
@@ -37,12 +37,12 @@ function _init()
       -- the current position on the map (in tiles, not pixels)
       -- takes scrolling into account.
       -- used for spawning objects at specific points.
-      spawn_x = 200,
-      prev_spawn_x = 200,
+      spawn_x = 0,
+      prev_spawn_x = 0,
       -- the maps are looping, so their x-coordinates
       -- can't be used for calculating our spawn points.
       -- we need an ever-increasing counter
-      abs_x = 200,
+      abs_x = 0,
       curr_e = {},
       curr_i = {},
 
@@ -60,45 +60,7 @@ function _init()
         init_ingredients()
       end,
 
-      update = function(self)
-        -- we calculate where the right edge of the screen
-        -- would be if we would travel the map continously.
-        self.spawn_x = flr(self.abs_x / 8) + 16
-        -- check if we reached the end of the forrest
-        if (self.spawn_x == 216) change_state("POST_FORREST")
-
-        -- add objects only *once* per map tile
-        if (self.spawn_x != self.prev_spawn_x) then
-          self.prev_spawn_x = self.spawn_x
-
-          foreach(all_e[self.spawn_x], function(e) add(self.curr_e, e)  end)
-          foreach(all_i[self.spawn_x], function(i) add(self.curr_i, i)  end)
-        end
-
-        w:update()
-        foreach(self.curr_e, function(e) e:update() end)
-        foreach(self.curr_i, function(i) i:update() end)
-
-        for e in all(curr_e) do
-          if (collide(w, e) and w.iframes == 0) then
-            sfx(0)
-            w.hp -= 1
-            if (w.hp <= 0) then
-              change_state("GAME_OVER")
-            end
-            w.iframes = 60
-          end
-        end
-
-        -- check for ingredient pick ups
-        for i in all(self.curr_i) do
-          if (collide(w, i)) then
-            del(self.curr_i, i)
-          end
-        end
-
-        self:update_map()
-      end,
+      update = update_stage,
 
       update_map = function(self)
         self.foreground_x -= SCROLL_SPEED
@@ -113,13 +75,7 @@ function _init()
         if (self.background2_x < -127) self.background2_x = 0
         end,
 
-      draw = function(self)
-        self:draw_map()
-        foreach(self.curr_e, function(e) e:draw() end)
-        foreach(self.curr_i, function(i) i:draw() end)
-        w:draw()
-        draw_hp()
-      end,
+      draw = draw_stage,
 
       draw_map = function(self)
         cls(12)
@@ -172,15 +128,38 @@ function _init()
     ["CAVE"] = {
       foreground_x = 0,
       background1_x = 0,
-      update = function(self)
+      curr_e = {},
+      curr_i = {},
+      spawn_x = 0,
+      prev_spawn_x = 0,
+      abs_x = 0,
+
+      reset = function(self)
+        self.curr_e = {}
+        self.curr_i = {}
+        self.foreground_x = 0
+        self.background1_x = 0
+        self.background2_x = 0
+        self.spawn_x = 0
+        self.prev_spawn_x = 0
+        self.abs_x = 0
+        init_enemies()
+        init_ingredients()
+      end,
+
+      update = update_stage,
+
+      update_map = function(self)
         self.foreground_x -= SCROLL_SPEED
         self.background1_x -= 0.1
         -- the foreground map is 2 screens wide
         if (self.foreground_x < -128*2) self.foreground_x = 0
         if (self.background1_x < -127) self.background1_x = 0
-
       end,
-      draw = function(self)
+
+      draw = draw_stage,
+
+      draw_map = function(self)
         cls()
         palt(0, false)
         palt(7, true)
@@ -192,6 +171,54 @@ function _init()
       end
     },
   }
+end
+
+function update_stage(self)
+  -- we calculate where the right edge of the screen
+  -- would be if we would travel the map continously.
+  self.spawn_x = flr(self.abs_x / 8) + 16
+  -- check if we reached the end of the forrest
+  if (self.spawn_x == 216) change_state("POST_FORREST")
+
+  -- add objects only *once* per map tile
+  if (self.spawn_x != self.prev_spawn_x) then
+    self.prev_spawn_x = self.spawn_x
+
+    foreach(all_e[self.spawn_x], function(e) add(self.curr_e, e)  end)
+    foreach(all_i[self.spawn_x], function(i) add(self.curr_i, i)  end)
+  end
+
+  w:update()
+  foreach(self.curr_e, function(e) e:update() end)
+  foreach(self.curr_i, function(i) i:update() end)
+
+  for e in all(curr_e) do
+    if (collide(w, e) and w.iframes == 0) then
+      sfx(0)
+      w.hp -= 1
+      if (w.hp <= 0) then
+        change_state("GAME_OVER")
+      end
+      w.iframes = 60
+    end
+  end
+
+  -- check for ingredient pick ups
+  for i in all(self.curr_i) do
+    if (collide(w, i)) then
+      del(self.curr_i, i)
+    end
+  end
+
+  self:update_map()
+end
+
+function draw_stage(self)
+  self:draw_map()
+  foreach(self.curr_e, function(e) e:draw() end)
+  foreach(self.curr_i, function(i) i:draw() end)
+  w:draw()
+  draw_hp()
 end
 
 function init_gameloop()
@@ -345,19 +372,29 @@ function make_ingredient(_spr, _y)
   }
 end
 
-function init_enemies()
-  all_e = {
-    [18] = {make_snake(96, 0.5)},
-    [19] = {make_bat(55, 2), make_bat(75, 1)},
-    [20] = {make_bird(25, 1.0)},
-    [23] = {make_bird(55, 1.0), make_snake(96, 1.0)},
-    [30] = {make_bird(55, 1.0)},
-    -- [40] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-    -- [45] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-    -- [49] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-    -- [53] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-    -- [70] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-  }
+function init_enemies(stage)
+    all_e = {
+      [18] = {make_snake(96, 0.5)},
+      [19] = {make_bat(55, 2), make_bat(75, 1)},
+      [20] = {make_bird(25, 1.0)},
+      [23] = {make_bird(55, 1.0), make_snake(96, 1.0)},
+      [30] = {make_bird(55, 1.0)},
+      -- [40] = {make_bat(55, 0.75), make_bird(75, 1.0)},
+      -- [45] = {make_bat(55, 0.75), make_bird(75, 1.0)},
+      -- [49] = {make_bat(55, 0.75), make_bird(75, 1.0)},
+      -- [53] = {make_bat(55, 0.75), make_bird(75, 1.0)},
+      -- [70] = {make_bat(55, 0.75), make_bird(75, 1.0)},
+    }
+  -- elseif (stage == "CAVE") then
+  --   all_e = {
+  --     [40] = {make_bat(55, 0.75)},
+  --     [45] = {make_bat(55, 0.75)},
+  --     [49] = {make_bat(55, 0.75)},
+  --     [53] = {make_bat(55, 0.75)},
+  --     [70] = {make_bat(55, 0.75)},
+  --   }
+
+  -- end
 end
 
 function update_bird(self)
