@@ -20,7 +20,8 @@ function _init()
   f_damage = 1
 
   SCROLL_SPEED = 0.5
-  CURRENT_STATE = "FORREST"
+
+  CURRENT_STATE = ""
   init_gameloop()
   init_witch()
   init_enemies()
@@ -122,7 +123,7 @@ function _init()
       irisd = 1,
       irisi = 0,
       init = function(self)
-        w.x = 100
+        w.x = 8
         w.y = 60
       end,
       update = function(self)
@@ -220,11 +221,7 @@ function update_stage(self)
   for e in all(self.curr_e) do
     if (collide(w, e) and w.iframes == 0) then
       sfx(0)
-      w.hp -= 1
-      if (w.hp <= 0) then
-        change_state("GAME_OVER")
-      end
-      w.iframes = 60
+      w:hit()
     end
   end
 
@@ -332,8 +329,8 @@ function init_witch()
             w.y < y*8 + 6
           then
             -- did we also take damage?
-            if (fget(t, f_damage)) then
-              DEBUG_MSG = "DAMAGE"
+            if (fget(t, f_damage) and w.iframes == 0) then
+              w:hit()
             end
             map_collision = true
           end
@@ -371,6 +368,14 @@ function init_witch()
     end
   end
 
+  local hit_witch = function(self)
+    w.hp -= 1
+    w.iframes = 120
+    if (w.hp <= 0) then
+      change_state("GAME_OVER")
+    end
+  end
+
   w = {
     x = 10,
     y = 50,
@@ -385,6 +390,7 @@ function init_witch()
     iframes = 0,
     update = update_witch,
     draw = draw_witch,
+    hit = hit_witch
   }
 end
 
@@ -447,6 +453,7 @@ function init_enemies()
     -- [70] = {make_bat(55, 0.75), make_bird(75, 1.0)},
   }
   all_e["CAVE"] = {
+    [20] = {make_bat(55, 0.5)},
     [40] = {make_bat(55, 0.75)},
     [45] = {make_bat(55, 0.75)},
     [49] = {make_bat(55, 0.75)},
