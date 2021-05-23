@@ -187,7 +187,8 @@ function _init()
       end
     },
   }
-  change_state("PRE_CAVE")
+  -- change_state("PRE_CAVE")
+  change_state("FORREST")
 end
 
 
@@ -277,8 +278,10 @@ function init_witch()
 
     if(btn(2)) then
       self.dy -= accel
+      self.dir = 1
     elseif(btn(3)) then
       self.dy += accel
+      self.dir = -1
     end
 
     self.dy *= friction
@@ -297,10 +300,10 @@ function init_witch()
         local c = fget(t, f_collision)
         if (c) then
           if
-            w.x + 6 > x*8 and
-            w.y + 6 > y*8 and
-            w.x < x*8 + 6 and
-            w.y < y*8 + 6
+            w.x + 6 > x * 8 and
+            w.y + 6 > y * 8 and
+            w.x < x * 8 + 6 and
+            w.y < y * 8 + 6
           then
             -- did we also take damage?
             if (fget(t, f_damage) and w.iframes == 0) then
@@ -312,9 +315,6 @@ function init_witch()
       end
     end
 
-      -- TODO: Think about the bigger picture here:
-      -- Maybe we need the direction of barbara
-      -- to push her in the opposite one.
     if (not map_collision) then
       -- reset the velocity if we hit the edges
       if (tmp_y < 0 or tmp_y > 120) then
@@ -324,8 +324,11 @@ function init_witch()
       self.y = mid(8, tmp_y, 120)
 
     else
-      -- we don't want to get stuck
-      self.y -= 0.4
+      -- we don't want to get stuck,
+      -- so we multiply the current direction (either 1 or -1)
+      -- with the distance that we want the player to travel
+      -- for resetting.
+      self.y += (self.dir * 3.0)
     end
   end
 
@@ -348,6 +351,7 @@ function init_witch()
     x = 10,
     y = 50,
     dy = 0,
+    dir = 0,
     accel = 0.5,
     sprites = {1, 2, 3},
     tick = 0,
