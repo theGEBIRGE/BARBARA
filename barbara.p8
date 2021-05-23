@@ -62,6 +62,7 @@ function _init()
         self.spawn_x = 0
         self.prev_spawn_x = 0
         self.abs_x = 0
+        w:init()
         init_enemies()
       end,
 
@@ -155,6 +156,7 @@ function _init()
         self.spawn_x = 0
         self.prev_spawn_x = 0
         self.abs_x = 0
+        w:init()
         init_enemies()
       end,
 
@@ -187,8 +189,8 @@ function _init()
       end
     },
   }
-  -- change_state("PRE_CAVE")
-  change_state("FORREST")
+  change_state("PRE_CAVE")
+  -- change_state("FORREST")
 end
 
 
@@ -347,8 +349,17 @@ function init_witch()
     end
   end
 
+  local init_witch = function(self)
+    self.x = 20
+    self.y = 50
+    self.dy = 0
+    self.dir = 0
+    self.iframes = 0
+    self.hp = 3
+  end
+
   w = {
-    x = 10,
+    x = 20,
     y = 50,
     dy = 0,
     dir = 0,
@@ -361,7 +372,8 @@ function init_witch()
     iframes = 0,
     update = update_witch,
     draw = draw_witch,
-    hit = hit_witch
+    hit = hit_witch,
+    init = init_witch,
   }
 end
 
@@ -554,7 +566,7 @@ function collide(obj1, obj2)
 end
 
 function change_state(next_state)
-  -- clean up if a function is provided
+  -- initialize the state if a function is provided.
   if(game_states[next_state].init) then
     game_states[next_state]:init()
   end
