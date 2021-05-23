@@ -25,7 +25,6 @@ function _init()
   init_gameloop()
   init_witch()
   init_enemies()
-  init_ingredients()
 
   game_states = {
     ["GAME_OVER"] = {
@@ -53,11 +52,9 @@ function _init()
       -- we need an ever-increasing counter
       abs_x = 0,
       curr_e = {},
-      curr_i = {},
 
       init = function(self)
         self.curr_e = {}
-        self.curr_i = {}
         self.map_x = 0
         self.background1_x = 0
         self.background2_x = 0
@@ -66,7 +63,6 @@ function _init()
         self.prev_spawn_x = 0
         self.abs_x = 0
         init_enemies()
-        init_ingredients()
       end,
 
       update = update_stage,
@@ -146,7 +142,6 @@ function _init()
 
     ["CAVE"] = {
       curr_e = {},
-      curr_i = {},
       map_x = 0,
       background1_x = 0,
       spawn_x = 0,
@@ -155,14 +150,12 @@ function _init()
 
       init = function(self)
         self.curr_e = {}
-        self.curr_i = {}
         self.map_x = 0
         self.background1_x = 0
         self.spawn_x = 0
         self.prev_spawn_x = 0
         self.abs_x = 0
         init_enemies()
-        init_ingredients()
       end,
 
       update = update_stage,
@@ -208,7 +201,6 @@ function update_stage(self)
     self.prev_spawn_x = self.spawn_x
 
     foreach(all_e[CURRENT_STATE][self.spawn_x], function(e) add(self.curr_e, e)  end)
-    foreach(all_i[CURRENT_STATE][self.spawn_x], function(i) add(self.curr_i, i)  end)
   end
 
   -- we need the absolute x-coordinate of the map (in pixels)
@@ -216,19 +208,11 @@ function update_stage(self)
   w:update(abs(self.map_x))
 
   foreach(self.curr_e, function(e) e:update() end)
-  foreach(self.curr_i, function(i) i:update() end)
 
   for e in all(self.curr_e) do
     if (collide(w, e) and w.iframes == 0) then
       sfx(0)
       w:hit()
-    end
-  end
-
-  -- check for ingredient pick ups
-  for i in all(self.curr_i) do
-    if (collide(w, i)) then
-      del(self.curr_i, i)
     end
   end
 
@@ -239,7 +223,6 @@ end
 function draw_stage(self)
   self:draw_map()
   foreach(self.curr_e, function(e) e:draw() end)
-  foreach(self.curr_i, function(i) i:draw() end)
   w:draw()
   draw_hp()
 end
@@ -343,7 +326,6 @@ function init_witch()
     else
       -- we don't want to get stuck
       self.y -= 0.4
-      -- TODO: Maybe dust particles?
     end
   end
 
@@ -376,50 +358,6 @@ function init_witch()
     update = update_witch,
     draw = draw_witch,
     hit = hit_witch
-  }
-end
-
-function init_ingredients()
-  all_i = {}
-  all_i["FORREST"] = {
-    [20] = {make_ingredient(15, 80)},
-    [30] = {make_ingredient(31, 96)}
-  }
-
-  all_i["CAVE"] = {
-    [20] = {make_ingredient(15, 80)},
-    [30] = {make_ingredient(31, 96)}
-  }
-end
-
-function update_ingredient(self)
-  if (self.x < 0) then
-    del(curr_i, self)
-  end
-  -- change the state ever half a second
-  if (self.ticks % 40 == 0) then
-    self.highlight =  not self.highlight
-  end
-  self.x -= SCROLL_SPEED
-  self.ticks += 1
-end
-
-function draw_ingredient(self)
-  spr(self.spr, self.x, self.y)
-  if (self.highlight) then
-    circ(self.x+4, self.y+4, 8, 8)
-  end
-end
-
-function make_ingredient(_spr, _y)
-  return {
-    x = 128,
-    y = _y,
-    spr = _spr,
-    ticks = 0,
-    highlight = false,
-    update = update_ingredient,
-    draw = draw_ingredient
   }
 end
 
