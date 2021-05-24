@@ -254,21 +254,21 @@ function _init()
       update_map = function(self)
         self.map_x -= SCROLL_SPEED
         self.abs_x += SCROLL_SPEED
-        self.background1_x -= 0.1
-        -- the foreground map is 2 screens wide
-        if (self.map_x < -128*2) self.map_x = 0
-        if (self.background1_x < -127) self.background1_x = 0
+        -- self.background1_x -= 0.1
+        -- -- the foreground map is 2 screens wide
+        -- if (self.map_x < -128*2) self.map_x = 0
+        -- if (self.background1_x < -127) self.background1_x = 0
       end,
 
       draw = draw_stage,
 
       draw_map = function(self)
         cls()
-        palt(0, false)
-        palt(7, true)
-        map(0, 48, self.map_x, 0, 32, 16)
-        map(0, 48, self.map_x + 128 * 2, 0, 32, 16)
-        palt()
+        -- palt(0, false)
+        -- palt(7, true)
+        -- map(0, 48, self.map_x, 0, 32, 16)
+        -- map(0, 48, self.map_x + 128 * 2, 0, 32, 16)
+        -- palt()
       end
     },
   }
@@ -383,7 +383,7 @@ function init_witch()
         local t = mget(x + x_offset, y + y_offset)
         local c = fget(t, f_collision)
         if (c) then
-          if
+           if
             w.x + 6 > x * 8 and
             w.y + 6 > y * 8 and
             w.x < x * 8 + 6 and
@@ -485,8 +485,41 @@ function init_enemies()
 
   all_e["CASTLE"] = {
     [20] = {make_ghost(55)},
+    [20] = {make_unhold()},
     [40] = {make_ghost(55)},
     [45] = {make_ghost(55)},
+  }
+end
+
+function update_unhold(self)
+  self.x += self.dx * 1
+  self.y += self.dy * 0.5
+  self.angle += 0.01
+
+  if (self.x + 16 >= 128 or self.x - 16 <= 0) then
+    self.dx = -self.dx
+  end
+
+  if (self.y + 16 >= 128 or self.y - 16 <= 0) then
+    self.dy = -self.dy
+  end
+
+end
+
+function draw_unhold(self)
+  local sx, sy = (76 % 16) * 8, (76 \ 16) * 8
+  spr_r(sx, sy, self.x, self.y, 4, 4, 0, 0, 16, 16, self.angle, 0)
+end
+
+function make_unhold()
+  return {
+    angle = 0,
+    x = 60,
+    y = 50,
+    dx = 1,
+    dy = 1,
+    update = update_unhold,
+    draw = draw_unhold
   }
 end
 
@@ -677,6 +710,58 @@ function iris(irisi, irisd, clr)
   return irisi, irisd
 end
 
+-- code by huulong
+-- https://www.lexaloffle.com/bbs/?tid=3593
+function spr_r(sx, sy, x, y, w, h, flip_x, flip_y, pivot_x, pivot_y, angle, transparent_color)
+  local sw = 8 * w
+  local sh = 8 * h
+
+  -- precompute angle trigonometry
+  local sa = sin(angle)
+  local ca = cos(angle)
+
+  -- in the operations below, 0.5 offsets represent pixel "inside"
+  -- we let PICO-8 functions floor coordinates at the last moment for more symmetrical results
+
+  -- precompute "target disc": where we must draw pixels of the rotated sprite (relative to (x, y))
+  -- the target disc ratio is the distance between the pivot the farthest corner of the sprite rectangle
+  local max_dx = max(pivot_x, sw - pivot_x) - 0.5
+  local max_dy = max(pivot_y, sh - pivot_y) - 0.5
+  local max_sqr_dist = max_dx * max_dx + max_dy * max_dy
+  local max_dist_minus_half = ceil(sqrt(max_sqr_dist)) - 0.5
+
+  -- iterate over disc's bounding box, then check if pixel is really in disc
+  for dx = - max_dist_minus_half, max_dist_minus_half do
+    for dy = - max_dist_minus_half, max_dist_minus_half do
+      if dx * dx + dy * dy <= max_sqr_dist then
+        -- prepare flip factors
+        local sign_x = flip_x and -1 or 1
+        local sign_y = flip_y and -1 or 1
+
+        -- if you don't use luamin (which has a bracket-related bug),
+        -- you don't need those intermediate vars, you can just inline them if you want
+        local rotated_dx = sign_x * ( ca * dx + sa * dy)
+        local rotated_dy = sign_y * (-sa * dx + ca * dy)
+
+        local xx = pivot_x + rotated_dx
+        local yy = pivot_y + rotated_dy
+
+        -- make sure to never draw pixels from the spritesheet
+        --  that are outside the source sprite
+        if xx >= 0 and xx < sw and yy >= 0 and yy < sh then
+          -- get source pixel
+          local c = sget(sx + xx, sy + yy)
+          -- ignore if transparent color
+          if c ~= transparent_color then
+            -- set target pixel color to source pixel color
+            pset(x + dx, y + dy, c)
+          end
+        end
+      end
+    end
+  end
+end
+
 __gfx__
 000000000000eee00000eee00000eee00000000000000000000000000000000000000111000000000000000000000ddd00000000000000000000000000000000
 00000000000eeff000eeeff000eeeff0000000000000000000000000000000000000111c00000000000000000000ddd600000000000000000000000000000000
@@ -838,4 +923,4 @@ b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2
 2510101010101010101010101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1010101010101010101010101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
-00010000156002f60035600326002e6002b600296002760024600236002360023600236001d60025600166000a600026000060000600006000160003600056000a600095000e6001260016600226000050000000
+010500002b750337502d75027750237501f7001b700177000e7000e7001170013700067501570017700007001a7501c7001d700207001d700227001f7002571027750297502b7502c7502d7502f7502b7502c750
