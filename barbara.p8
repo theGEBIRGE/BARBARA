@@ -27,7 +27,7 @@ function _init()
   init_witch()
   init_enemies()
 
-  game_states = {
+  game_scenes = {
     ["GAME_OVER"] = {
     update = function()
       if(btn(5)) _init()
@@ -70,9 +70,9 @@ function _init()
 
       update = update_stage,
 
-      check_next_state = function(self)
+      ended = function(self)
         -- check if we reached the end of the forrest
-        if (self.spawn_x == 216) change_state("POST_FORREST")
+        if (self.spawn_x == 216) change_scene("POST_FORREST")
       end,
 
       update_map = function(self)
@@ -117,7 +117,7 @@ function _init()
       irisd = -1,
       irisi = 92,
       update = function(self)
-        if (self.irisi == 0) change_state("PRE_CAVE")
+        if (self.irisi == 0) change_scene("PRE_CAVE")
       end,
       draw = function(self)
         local i, d = iris(self.irisi, self.irisd, 13)
@@ -134,7 +134,7 @@ function _init()
         w.y = 60
       end,
       update = function(self)
-        if (self.irisi == 92) change_state("CAVE")
+        if (self.irisi == 92) change_scene("CAVE")
       end,
       draw = function(self)
         cls()
@@ -171,8 +171,8 @@ function _init()
 
       update = update_stage,
 
-      check_next_state = function(self)
-        if (self.spawn_x == 216) change_state("POST_CAVE")
+      ended = function(self)
+        if (self.spawn_x == 216) change_scene("POST_CAVE")
       end,
 
       update_map = function(self)
@@ -203,7 +203,7 @@ function _init()
       irisd = -1,
       irisi = 92,
       update = function(self)
-        if (self.irisi == 0) change_state("PRE_CASTLE")
+        if (self.irisi == 0) change_scene("PRE_CASTLE")
       end,
       draw = function(self)
         local i, d = iris(self.irisi, self.irisd, 13)
@@ -220,15 +220,12 @@ function _init()
         w.y = 60
       end,
       update = function(self)
-        if (self.irisi == 92) change_state("CASTLE")
+        if (self.irisi == 92) change_scene("CASTLE")
       end,
       draw = function(self)
         cls()
         palt(0, false)
         palt(7, true)
-        -- TODO: Draw the appropriate maps
-        -- map(64, 16, 0, 0, 16, 16)
-        -- map(0, 16, 0, 0, 16, 16)
         palt()
         w:draw()
         local i, d = iris(self.irisi, self.irisd, 13)
@@ -244,39 +241,59 @@ function _init()
       spawn_x = 0,
       prev_spawn_x = 0,
       abs_x = 0,
+      u = nil,
+      start_time = nil,
 
       init = function(self)
         self.curr_e = {}
         self.map_x = 0
         self.background1_x = 0
-        self.spawn_x = 0
-        self.prev_spawn_x = 0
-        self.abs_x = 0
         w:init()
-        init_enemies()
+        self.u = make_unhold()
+        self.start_time = time()
       end,
 
-      update = update_stage,
+      update = function(self)
+        w:update(abs(self.map_x))
+        self.u:update()
 
-      check_next_state = function(self)
-      end,
+        foreach(self.curr_e, function(e) e:update() end)
 
-      update_map = function(self)
+        for e in all(self.curr_e) do
+          if (collide(w, e) and w.iframes == 0) then
+            sfx(0)
+            w:hit()
+          end
+        end
+
+        -- update the map
         self.map_x -= SCROLL_SPEED
         self.abs_x += SCROLL_SPEED
-        -- self.background1_x -= 0.1
-        -- -- the foreground map is 2 screens wide
-        -- if (self.map_x < -128*2) self.map_x = 0
-        -- if (self.background1_x < -127) self.background1_x = 0
+        self.background1_x -= 0.1
+        if (self.map_x < -128*2) self.map_x = 0
+        if (self.background1_x < -127) self.background1_x = 0
+        self:ended()
+      end,
+
+      ended = function(self)
+        if (time() - self.start_time) > 10 then
+          change_scene("GAME_OVER")
+        end
       end,
 
       draw = function(self)
         cls()
+        map(0, 48, self.map_x, 0, 32, 16)
+        map(0, 48, self.map_x + 128*2, 0, 32, 16)
+        w:draw()
+        self.u:draw()
+        foreach(self.curr_e, function(e) e:draw() end)
+        draw_hp()
       end
     },
   }
-  -- change_state("POST_CAVE")
-  change_state("FORREST")
+  change_scene("POST_CAVE")
+  -- change_scene("FORREST")
 end
 
 
@@ -306,7 +323,7 @@ function update_stage(self)
   end
 
   self:update_map()
-  self:check_next_state()
+  self:ended()
 end
 
 function init_gameloop()
@@ -315,11 +332,11 @@ function init_gameloop()
 end
 
 function game_update()
-  game_states[CURRENT_STATE]:update()
+  game_scenes[CURRENT_STATE]:update()
 end
 
 function game_draw()
-  game_states[CURRENT_STATE]:draw()
+  game_scenes[CURRENT_STATE]:draw()
   print(DEBUG_MSG, 50, 0)
 end
 
@@ -424,7 +441,7 @@ function init_witch()
     w.hp -= 1
     w.iframes = 120
     if (w.hp <= 0) then
-      change_state("GAME_OVER")
+      change_scene("GAME_OVER")
     end
   end
 
@@ -488,28 +505,34 @@ function init_enemies()
 end
 
 function update_unhold(self)
-  self.x += self.dx * 1
-  self.y += self.dy * 0.5
-  self.angle += 0.01
+  if (self.state == "BOUNCE") then
+    self.x += self.dx * 1
+    self.y += self.dy * 0.5
 
-  if (self.x + 16 >= 128 or self.x - 16 <= 0) then
-    self.dx = -self.dx
+
+    self.angle += 0.01
+
+    if (self.x + 16 >= 128 or self.x - 16 <= 0) then
+      self.dx = -self.dx
+    end
+
+    if (self.y + 16 >= 128 or self.y - 16 <= 0) then
+      self.dy = -self.dy
+    end
   end
-
-  if (self.y + 16 >= 128 or self.y - 16 <= 0) then
-    self.dy = -self.dy
-  end
-
 end
 
 function draw_unhold(self)
-  local sx, sy = (76 % 16) * 8, (76 \ 16) * 8
-  spr_r(sx, sy, self.x, self.y, 4, 4, 0, 0, 16, 16, self.angle, 0)
+  if (self.state == "BOUNCE") then
+    local sx, sy = (76 % 16) * 8, (76 \ 16) * 8
+    spr_r(sx, sy, self.x, self.y, 4, 4, 0, 0, 16, 16, self.angle, 0)
+  end
 end
 
 function make_unhold()
   return {
     angle = 0,
+    state = "BOUNCE",
     x = 60,
     y = 50,
     dx = 1,
@@ -521,15 +544,15 @@ end
 
 function update_bird(self)
   self.x -= self.speed
-  if (self.x < - 8) then del(curr_e, self); return end
+  if (self.x < -8) then del(curr_e, self); return end
   animate(self)
 
   if (self.y_dir == "UP") then
-    self.y -= self.speed
+    self.y -= 0.5
   end
 
   if (self.y_dir == "DOWN") then
-    self.y += self.speed
+    self.y += 0.5
   end
 
   if (self.y >= self.base_y + 10 ) then
@@ -555,7 +578,6 @@ function make_bird(_y, _speed)
     -- always spawn just outside the view port
     x = 128,
     y = _y,
-    x_dir = 0,
     y_dir = "DOWN",
     speed = _speed,
     update = update_bird,
@@ -683,10 +705,10 @@ function collide(obj1, obj2)
   end
 end
 
-function change_state(next_state)
+function change_scene(next_state)
   -- initialize the state if a function is provided.
-  if(game_states[next_state].init) then
-    game_states[next_state]:init()
+  if(game_scenes[next_state].init) then
+    game_scenes[next_state]:init()
   end
   CURRENT_STATE = next_state
 end
@@ -919,4 +941,4 @@ b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2
 2510101010101010101010101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1010101010101010101010101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
-010500002b750337502d75027750237501f7001b700177000e7000e7001170013700067501570017700007001a7501c7001d700207001d700227001f7002571027750297502b7502c7502d7502f7502b7502c750
+000500002b750337502d75027750237501f7001b700177000e7000e7001170013700067001570017700007001a7001c7001d700207001d700227001f7002570027700297002b7002c7002d7002f7002b7002c700
