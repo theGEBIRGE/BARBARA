@@ -52,10 +52,9 @@ function _init()
       -- can't be used for calculating our spawn points.
       -- we need an ever-increasing counter
       abs_x = 0,
-      curr_e = {},
 
       init = function(self)
-        self.curr_e = {}
+        curr_e = {}
         self.map_x = 0
         self.foreground_x = 0
         self.background1_x = 0
@@ -102,7 +101,7 @@ function _init()
         map(0, 0, self.map_x, 0, 64, 16)
         map(0, 0, self.map_x + 128 * 4, 0, 64, 16)
         palt()
-        foreach(self.curr_e, function(e) e:draw() end)
+        foreach(curr_e, function(e) e:draw() end)
         w:draw()
         map(32, 16, self.foreground_x, 0, 32, 16)
         map(32, 16, self.foreground_x + 128*2, 0, 32, 16)
@@ -151,7 +150,6 @@ function _init()
     },
 
     ["CAVE"] = {
-      curr_e = {},
       map_x = 0,
       background1_x = 0,
       spawn_x = 0,
@@ -159,7 +157,7 @@ function _init()
       abs_x = 0,
 
       init = function(self)
-        self.curr_e = {}
+        curr_e = {}
         self.map_x = 0
         self.background1_x = 0
         self.spawn_x = 0
@@ -193,7 +191,7 @@ function _init()
         map(0, 16, self.map_x, 0, 32, 16)
         map(0, 16, self.map_x + 128 * 2, 0, 32, 16)
         palt()
-        foreach(self.curr_e, function(e) e:draw() end)
+        foreach(curr_e, function(e) e:draw() end)
         w:draw()
         draw_hp()
       end,
@@ -235,7 +233,6 @@ function _init()
     },
 
     ["CASTLE"] = {
-      curr_e = {},
       map_x = 0,
       background1_x = 0,
       spawn_x = 0,
@@ -245,7 +242,7 @@ function _init()
       start_time = nil,
 
       init = function(self)
-        self.curr_e = {}
+        curr_e = {}
         self.map_x = 0
         self.background1_x = 0
         w:init()
@@ -257,9 +254,9 @@ function _init()
         w:update(abs(self.map_x))
         self.u:update()
 
-        foreach(self.curr_e, function(e) e:update() end)
+        foreach(curr_e, function(e) e:update() end)
 
-        for e in all(self.curr_e) do
+        for e in all(curr_e) do
           if (collide(w, e) and w.iframes == 0) then
             sfx(0)
             w:hit()
@@ -287,13 +284,13 @@ function _init()
         map(0, 48, self.map_x + 128*2, 0, 32, 16)
         w:draw()
         self.u:draw()
-        foreach(self.curr_e, function(e) e:draw() end)
+        foreach(curr_e, function(e) e:draw() end)
         draw_hp()
       end
     },
   }
-  change_scene("POST_CAVE")
-  -- change_scene("FORREST")
+  -- change_scene("POST_CAVE")
+  change_scene("FORREST")
 end
 
 
@@ -306,16 +303,16 @@ function update_stage(self)
   if (self.spawn_x != self.prev_spawn_x) then
     self.prev_spawn_x = self.spawn_x
 
-    foreach(all_e[CURRENT_STATE][self.spawn_x], function(e) add(self.curr_e, e)  end)
+    foreach(all_e[CURRENT_STATE][self.spawn_x], function(e) add(curr_e, e)  end)
   end
 
   -- we need the absolute x-coordinate of the map (in pixels)
   -- for collision detection.
   w:update(abs(self.map_x))
 
-  foreach(self.curr_e, function(e) e:update() end)
+  foreach(curr_e, function(e) e:update() end)
 
-  for e in all(self.curr_e) do
+  for e in all(curr_e) do
     if (collide(w, e) and w.iframes == 0) then
       sfx(0)
       w:hit()
@@ -474,6 +471,7 @@ function init_witch()
 end
 
 function init_enemies()
+  curr_e = {}
   all_e = {}
   all_e["FORREST"] = {
     [18] = {make_snake(96, 0.5)},
@@ -566,6 +564,7 @@ end
 
 function draw_bird(self)
   spr(self.sprites[self.frame], self.x, self.y)
+  -- tweet sporadically
 end
 
 function make_bird(_y, _speed)
@@ -942,3 +941,7 @@ b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2
 1010101010101010101010101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
 000500002b750337502d75027750237501f7001b700177000e7000e7001170013700067001570017700007001a7001c7001d700207001d700227001f7002570027700297002b7002c7002d7002f7002b7002c700
+001000000000025050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0010000039110351003411034110000003a1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
