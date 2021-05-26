@@ -242,10 +242,10 @@ function _init()
       start_time = nil,
 
       init = function(self)
+        w:init()
         curr_e = {}
         self.map_x = 0
         self.background1_x = 0
-        w:init()
         self.u = make_unhold()
         self.start_time = time()
       end,
@@ -269,14 +269,13 @@ function _init()
         self.background1_x -= 0.1
         if (self.map_x < -128*2) self.map_x = 0
         if (self.background1_x < -127) self.background1_x = 0
-        self:ended()
-      end,
-
-      ended = function(self)
-        if (time() - self.start_time) > 10 then
-          change_scene("GAME_OVER")
+        if (time() - self.start_time) > 3 then
+          local beaten = self.u:next_phase()
+          if (beaten) change_scene("GAME_OVER")
+          self.start_time = time()
         end
       end,
+
 
       draw = function(self)
         cls()
@@ -290,7 +289,8 @@ function _init()
     },
   }
   -- change_scene("POST_CAVE")
-  change_scene("FORREST")
+  -- change_scene("FORREST")
+  change_scene("CASTLE")
 end
 
 
@@ -494,21 +494,14 @@ function init_enemies()
     [53] = {make_bat(55, 0.75)},
     [70] = {make_bat(55, 0.75)},
   }
-
-  all_e["CASTLE"] = {
-    [20] = {make_unhold()},
-    [40] = {make_ghost(55)},
-    [45] = {make_ghost(55)},
-  }
 end
 
 function update_unhold(self)
-  if (self.state == "BOUNCE") then
+  if (self.phase == "BOUNCE") then
     self.x += self.dx * 1
     self.y += self.dy * 0.5
 
-
-    self.angle += 0.01
+    self.spin_speed = 0.05
 
     if (self.x + 16 >= 128 or self.x - 16 <= 0) then
       self.dx = -self.dx
@@ -518,25 +511,83 @@ function update_unhold(self)
       self.dy = -self.dy
     end
   end
+
+  if (self.phase == "SPAWN_GHOSTS") then
+
+    if (self.spawn_cooldown == 0) then
+      local y_ghost = rndb(20, 100)
+      add(curr_e, make_ghost(y_ghost))
+      self.spawn_cooldown = 60
+    end
+
+    if (self.x < 100) then
+      self.x += abs(self.dx) * 1
+    end
+
+    if (self.y > 60) then
+      self.y -= abs(self.dy) * 0.5
+    end
+
+    self.spin_speed = 0.01
+    self.spawn_cooldown -= 1
+  end
+
+  if (self.phase == "PRE_HORIZONTAL") then
+    self.spin_speed = 0.01
+    if(self.angle > 0.7 and self.angle <= 0.75) then
+      self.spin = false
+      self.angle = 0.75
+    end
+  end
+
+  if (self.phase == "HORIZONTAL") then
+    --TODO: mimic the player movement on the y axis
+    --TODO: lunch towards her/him
+
+    if (self.y < w.y) self.y += 1
+    if (self.y > w.y) self.y -= 1
+
+  end
+
+  if (self.spin) then
+    self.angle += self.spin_speed
+    if (self.angle > 1.5) self.angle = 0.5
+  end
+
 end
 
 function draw_unhold(self)
-  if (self.state == "BOUNCE") then
-    local sx, sy = (76 % 16) * 8, (76 \ 16) * 8
+  local sx, sy = (76 % 16) * 8, (76 \ 16) * 8
+  if (self.phase == "BOUNCE" or
+      self.phase == "SPAWN_GHOSTS" or
+      self.phase == "PRE_HORIZONTAL" or
+      self.phase == "HORIZONTAL") then
     spr_r(sx, sy, self.x, self.y, 4, 4, 0, 0, 16, 16, self.angle, 0)
   end
+
 end
 
 function make_unhold()
   return {
-    angle = 0,
-    state = "BOUNCE",
+    angle = -0.5,
+    phase = "BOUNCE",
+    spawn_cooldown = 140,
+    spin = true,
+    spin_speed = 0,
     x = 60,
     y = 50,
     dx = 1,
     dy = 1,
     update = update_unhold,
-    draw = draw_unhold
+    draw = draw_unhold,
+    -- the last phase should return true so that
+    -- the scene knows the boss is finished.
+    next_phase = function(self)
+      -- if (self.phase == "SPAWN_GHOSTS") return true
+      if (self.phase == "PRE_HORIZONTAL") self.phase = "HORIZONTAL"
+      if (self.phase == "SPAWN_GHOSTS") self.phase = "PRE_HORIZONTAL"
+      if (self.phase == "BOUNCE") self.phase = "SPAWN_GHOSTS"
+    end
   }
 end
 
@@ -639,6 +690,12 @@ function make_snake(_y, _speed)
 end
 
 -- utilities
+
+-- code by MBoffin
+function rndb(low,high)
+  return flr(rnd(high-low+1)+low)
+end
+
 function animate(self)
   self.tick=(self.tick+1)%self.step --tick fwd
   if (self.tick==0) self.frame=self.frame%#self.sprites+1
@@ -684,7 +741,7 @@ function make_ghost(_y)
     frame = 1,
     step = 6,
     sprites = {112, 113, 114},
-    x = 128,
+    x = 80,
     y = _y,
     update = update_ghost,
     draw = draw_ghost
