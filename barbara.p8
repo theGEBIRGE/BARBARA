@@ -509,6 +509,16 @@ function update_unhold(self)
     if (self.y + 16 >= 128 or self.y - 16 <= 0) then
       self.dy = -self.dy
     end
+    end
+
+  if (self.phase == "PRE_SPAWN_GHOSTS") then
+    if (time() - self.t > 6) self:next_phase()
+
+    local delta_x = self.x - 100
+    local delta_y = self.y - 64
+
+    self.x -= delta_x / 100
+    self.y -= delta_y / 100
   end
 
   if (self.phase == "SPAWN_GHOSTS") then
@@ -520,13 +530,6 @@ function update_unhold(self)
       self.spawn_cooldown = 60
     end
 
-    if (self.x < 100) then
-      self.x += abs(self.dx) * 1
-    end
-
-    if (self.y > 60) then
-      self.y -= abs(self.dy) * 0.5
-    end
 
     self.spin_speed = 0.01
     self.spawn_cooldown -= 1
@@ -540,6 +543,7 @@ function update_unhold(self)
       self:next_phase()
     end
   end
+
 
   if (self.phase == "HORIZONTAL") then
     --TODO: mimic the player movement on the y axis
@@ -560,6 +564,7 @@ end
 function draw_unhold(self)
   local sx, sy = (76 % 16) * 8, (76 \ 16) * 8
   if (self.phase == "BOUNCE" or
+      self.phase == "PRE_SPAWN_GHOSTS" or
       self.phase == "SPAWN_GHOSTS" or
       self.phase == "PRE_HORIZONTAL" or
       self.phase == "HORIZONTAL") then
@@ -588,10 +593,10 @@ function make_unhold()
     next_phase = function(self)
       -- reset the timer
       self.t = time()
-      -- if (self.phase == "SPAWN_GHOSTS") return true
       if (self.phase == "PRE_HORIZONTAL") self.phase = "HORIZONTAL"
       if (self.phase == "SPAWN_GHOSTS") self.phase = "PRE_HORIZONTAL"
-      if (self.phase == "BOUNCE") self.phase = "SPAWN_GHOSTS"
+      if (self.phase == "PRE_SPAWN_GHOSTS") self.phase = "SPAWN_GHOSTS"
+      if (self.phase == "BOUNCE") self.phase = "PRE_SPAWN_GHOSTS"
     end
   }
 end
