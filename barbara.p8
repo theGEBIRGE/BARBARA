@@ -523,7 +523,11 @@ function update_unhold(self)
     end
 
   if (self.phase == "PRE_SPAWN_GHOSTS") then
-    if (time() - self.t > 6) self:next_phase()
+    if (self.x > 98 and self.y > 62)  then
+      self.x = 100
+      self.y = 64
+      self:next_phase()
+    end
 
     local delta_x = self.x - 100
     local delta_y = self.y - 64
