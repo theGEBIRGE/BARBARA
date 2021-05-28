@@ -3,8 +3,16 @@ version 32
 __lua__
 -- BARBARA
 -- by FREDERIC LINN
-
+--
 function _init()
+  init_globals()
+  init_objects()
+  -- change_scene("POST_CAVE")
+  -- change_scene("FORREST")
+  change_scene("CASTLE")
+end
+
+function init_globals()
   -- the y-offset of the map per stage.
   -- used for getting the correct map tile flags.
   MAP_OFFSETS = {
@@ -13,22 +21,30 @@ function _init()
     ["CASTLE"] = 48,
   }
 
-  fadedir = 1
-  fadepos = 0
+  CURRENT_STAGE = ""
   DEBUG_MSG = ""
+
   -- flag definitions
   f_collision = 0
   f_damage = 1
 
-  SCROLL_SPEED = 0.5
+  -- used for screen transitions
+  fadedir = 1
+  fadepos = 0
 
-  CURRENT_STATE = ""
+  SCROLL_SPEED = 0.5
+end
+
+function init_objects()
   init_gameloop()
   init_witch()
-  init_enemies()
+  init_scenes()
+end
 
-  game_scenes = {
-    ["GAME_OVER"] = {
+function init_scenes()
+  scenes = {}
+
+  scenes["GAME_OVER"] = {
     update = function()
       if(btn(5)) _init()
     end,
@@ -36,261 +52,256 @@ function _init()
       cls()
       print("PRESS ❎ TO CONTINUE")
     end
-    },
+  }
 
-    ["FORREST"] = {
-      map_x = 0,
-      background1_x = 0,
-      background2_x = 0,
-      background3_x = 128,
-      -- the current position on the map (in tiles, not pixels)
-      -- takes scrolling into account.
-      -- used for spawning objects at specific points.
-      spawn_x = 0,
-      prev_spawn_x = 0,
-      -- the maps are looping, so their x-coordinates
-      -- can't be used for calculating our spawn points.
-      -- we need an ever-increasing counter
-      abs_x = 0,
+  scenes["FORREST"] = {
+    map_x = 0,
+    background1_x = 0,
+    background2_x = 0,
+    background3_x = 128,
+    -- the current position on the map (in tiles, not pixels)
+    -- takes scrolling into account.
+    -- used for spawning objects at specific points.
+    spawn_x = 0,
+    prev_spawn_x = 0,
+    -- the maps are looping, so their x-coordinates
+    -- can't be used for calculating our spawn points.
+    -- we need an ever-increasing counter
+    abs_x = 0,
 
-      init = function(self)
-        curr_e = {}
-        self.map_x = 0
-        self.foreground_x = 0
-        self.background1_x = 0
-        self.background2_x = 0
-        self.background3_x = 128
-        self.spawn_x = 0
-        self.prev_spawn_x = 0
-        self.abs_x = 0
-        w:init()
-        init_enemies()
+    init = function(self)
+      curr_e = {}
+      self.map_x = 0
+      self.foreground_x = 0
+      self.background1_x = 0
+      self.background2_x = 0
+      self.background3_x = 128
+      self.spawn_x = 0
+      self.prev_spawn_x = 0
+      self.abs_x = 0
+      w:init()
+      init_enemies()
+    end,
+
+    update = update_stage,
+
+    ended = function(self)
+      -- check if we reached the end of the forrest
+      if (self.spawn_x == 216) change_scene("POST_FORREST")
+    end,
+
+    update_map = function(self)
+      self.map_x -= SCROLL_SPEED
+      self.abs_x += SCROLL_SPEED
+      self.background1_x -= 0.25
+      self.background2_x -= 0.1
+      self.background3_x -= 0.05
+      self.foreground_x -= SCROLL_SPEED
+      -- the foreground map is 4 screens wide
+      if (self.map_x < -128*4) self.map_x = 0
+      if (self.foreground_x < -128 * 2) self.foreground_x = 0
+      -- the backgrounds are each 1 screen wide
+      if (self.background1_x < -127) self.background1_x = 0
+      if (self.background2_x < -127) self.background2_x = 0
       end,
 
-      update = update_stage,
+    draw = function(self)
+      cls(12)
+      map(96, 0, self.background3_x, 0, 32, 16)
+      map(80, 0, self.background2_x, 0, 16, 16)
+      map(80, 0, self.background2_x + 128, 0, 16, 16)
+      map(64, 0, self.background1_x + 128, 0, 16, 16)
+      map(64, 0, self.background1_x, 0, 16, 16)
+      palt(0, false)
+      palt(8, true)
+      map(0, 0, self.map_x, 0, 64, 16)
+      map(0, 0, self.map_x + 128 * 4, 0, 64, 16)
+      palt()
+      foreach(curr_e, function(e) e:draw() end)
+      w:draw()
+      map(32, 16, self.foreground_x, 0, 32, 16)
+      map(32, 16, self.foreground_x + 128*2, 0, 32, 16)
+      draw_hp()
+    end,
 
-      ended = function(self)
-        -- check if we reached the end of the forrest
-        if (self.spawn_x == 216) change_scene("POST_FORREST")
-      end,
+    draw_map = function(self)
+    end
+  }
 
-      update_map = function(self)
-        self.map_x -= SCROLL_SPEED
-        self.abs_x += SCROLL_SPEED
-        self.background1_x -= 0.25
-        self.background2_x -= 0.1
-        self.background3_x -= 0.05
-        self.foreground_x -= SCROLL_SPEED
-        -- the foreground map is 4 screens wide
-        if (self.map_x < -128*4) self.map_x = 0
-        if (self.foreground_x < -128 * 2) self.foreground_x = 0
-        -- the backgrounds are each 1 screen wide
-        if (self.background1_x < -127) self.background1_x = 0
-        if (self.background2_x < -127) self.background2_x = 0
-        end,
+  scenes["POST_FORREST"] = {
+    irisd = -1,
+    irisi = 92,
+    update = function(self)
+      if (self.irisi == 0) change_scene("PRE_CAVE")
+    end,
+    draw = function(self)
+      local i, d = iris(self.irisi, self.irisd, 13)
+      self.irisi = i
+      self.irisd = d
+    end
+  }
 
-      draw = function(self)
-        cls(12)
-        map(96, 0, self.background3_x, 0, 32, 16)
-        map(80, 0, self.background2_x, 0, 16, 16)
-        map(80, 0, self.background2_x + 128, 0, 16, 16)
-        map(64, 0, self.background1_x + 128, 0, 16, 16)
-        map(64, 0, self.background1_x, 0, 16, 16)
-        palt(0, false)
-        palt(8, true)
-        map(0, 0, self.map_x, 0, 64, 16)
-        map(0, 0, self.map_x + 128 * 4, 0, 64, 16)
-        palt()
-        foreach(curr_e, function(e) e:draw() end)
-        w:draw()
-        map(32, 16, self.foreground_x, 0, 32, 16)
-        map(32, 16, self.foreground_x + 128*2, 0, 32, 16)
-        draw_hp()
-      end,
+  scenes["PRE_CAVE"] = {
+    irisd = 1,
+    irisi = 0,
+    init = function(self)
+      w.x = 8
+      w.y = 60
+    end,
+    update = function(self)
+      if (self.irisi == 92) change_scene("CAVE")
+    end,
+    draw = function(self)
+      cls()
+      palt(0, false)
+      palt(7, true)
+      map(64, 16, 0, 0, 16, 16)
+      map(0, 16, 0, 0, 16, 16)
+      palt()
+      w:draw()
+      local i, d = iris(self.irisi, self.irisd, 13)
+      self.irisi = i
+      self.irisd = d
+    end
+  }
 
-      draw_map = function(self)
-      end
-    },
+  scenes["CAVE"] = {
+    map_x = 0,
+    background1_x = 0,
+    spawn_x = 0,
+    prev_spawn_x = 0,
+    abs_x = 0,
 
-    ["POST_FORREST"] = {
-      irisd = -1,
-      irisi = 92,
-      update = function(self)
-        if (self.irisi == 0) change_scene("PRE_CAVE")
-      end,
-      draw = function(self)
-        local i, d = iris(self.irisi, self.irisd, 13)
-        self.irisi = i
-        self.irisd = d
-      end
-    },
+    init = function(self)
+      curr_e = {}
+      self.map_x = 0
+      self.background1_x = 0
+      self.spawn_x = 0
+      self.prev_spawn_x = 0
+      self.abs_x = 0
+      w:init()
+      init_enemies()
+    end,
 
-    ["PRE_CAVE"] = {
-      irisd = 1,
-      irisi = 0,
-      init = function(self)
-        w.x = 8
-        w.y = 60
-      end,
-      update = function(self)
-        if (self.irisi == 92) change_scene("CAVE")
-      end,
-      draw = function(self)
-        cls()
-        palt(0, false)
-        palt(7, true)
-        map(64, 16, 0, 0, 16, 16)
-        map(0, 16, 0, 0, 16, 16)
-        palt()
-        w:draw()
-        local i, d = iris(self.irisi, self.irisd, 13)
-        self.irisi = i
-        self.irisd = d
-      end
-    },
+    update = update_stage,
 
-    ["CAVE"] = {
-      map_x = 0,
-      background1_x = 0,
-      spawn_x = 0,
-      prev_spawn_x = 0,
-      abs_x = 0,
+    ended = function(self)
+      if (self.spawn_x == 216) change_scene("POST_CAVE")
+    end,
 
-      init = function(self)
-        curr_e = {}
-        self.map_x = 0
-        self.background1_x = 0
-        self.spawn_x = 0
-        self.prev_spawn_x = 0
-        self.abs_x = 0
-        w:init()
-        init_enemies()
-      end,
+    update_map = function(self)
+      self.map_x -= SCROLL_SPEED
+      self.abs_x += SCROLL_SPEED
+      self.background1_x -= 0.1
+      -- the foreground map is 2 screens wide
+      if (self.map_x < -128*2) self.map_x = 0
+      if (self.background1_x < -127) self.background1_x = 0
+    end,
 
-      update = update_stage,
+    draw = function(self)
+      cls()
+      palt(0, false)
+      palt(7, true)
+      map(64, 16, self.background1_x, 0, 16, 16)
+      map(64, 16, self.background1_x + 128, 0, 16, 16)
+      map(0, 16, self.map_x, 0, 32, 16)
+      map(0, 16, self.map_x + 128 * 2, 0, 32, 16)
+      palt()
+      foreach(curr_e, function(e) e:draw() end)
+      w:draw()
+      draw_hp()
+    end,
+  }
 
-      ended = function(self)
-        if (self.spawn_x == 216) change_scene("POST_CAVE")
-      end,
+  scenes["POST_CAVE"] = {
+    irisd = -1,
+    irisi = 92,
+    update = function(self)
+      if (self.irisi == 0) change_scene("PRE_CASTLE")
+    end,
+    draw = function(self)
+      local i, d = iris(self.irisi, self.irisd, 13)
+      self.irisi = i
+      self.irisd = d
+    end
+  }
 
-      update_map = function(self)
-        self.map_x -= SCROLL_SPEED
-        self.abs_x += SCROLL_SPEED
-        self.background1_x -= 0.1
-        -- the foreground map is 2 screens wide
-        if (self.map_x < -128*2) self.map_x = 0
-        if (self.background1_x < -127) self.background1_x = 0
-      end,
+  scenes["PRE_CASTLE"] = {
+    irisd = 1,
+    irisi = 0,
+    init = function(self)
+      w.x = 8
+      w.y = 60
+    end,
+    update = function(self)
+      if (self.irisi == 92) change_scene("CASTLE")
+    end,
+    draw = function(self)
+      cls()
+      palt(0, false)
+      palt(7, true)
+      palt()
+      w:draw()
+      local i, d = iris(self.irisi, self.irisd, 13)
+      self.irisi = i
+      self.irisd = d
+    end
+  }
 
-      draw = function(self)
-        cls()
-        palt(0, false)
-        palt(7, true)
-        map(64, 16, self.background1_x, 0, 16, 16)
-        map(64, 16, self.background1_x + 128, 0, 16, 16)
-        map(0, 16, self.map_x, 0, 32, 16)
-        map(0, 16, self.map_x + 128 * 2, 0, 32, 16)
-        palt()
-        foreach(curr_e, function(e) e:draw() end)
-        w:draw()
-        draw_hp()
-      end,
-    },
+  scenes["CASTLE"] = {
+    map_x = 0,
+    background1_x = 0,
+    spawn_x = 0,
+    prev_spawn_x = 0,
+    abs_x = 0,
+    u = nil,
 
-    ["POST_CAVE"] = {
-      irisd = -1,
-      irisi = 92,
-      update = function(self)
-        if (self.irisi == 0) change_scene("PRE_CASTLE")
-      end,
-      draw = function(self)
-        local i, d = iris(self.irisi, self.irisd, 13)
-        self.irisi = i
-        self.irisd = d
-      end
-    },
+    init = function(self)
+      w:init()
+      curr_e = {}
+      self.map_x = 0
+      self.background1_x = 0
+      self.u = make_unhold()
+    end,
 
-    ["PRE_CASTLE"] = {
-      irisd = 1,
-      irisi = 0,
-      init = function(self)
-        w.x = 8
-        w.y = 60
-      end,
-      update = function(self)
-        if (self.irisi == 92) change_scene("CASTLE")
-      end,
-      draw = function(self)
-        cls()
-        palt(0, false)
-        palt(7, true)
-        palt()
-        w:draw()
-        local i, d = iris(self.irisi, self.irisd, 13)
-        self.irisi = i
-        self.irisd = d
-      end
-    },
+    update = function(self)
+      w:update(abs(self.map_x))
+      self.u:update()
 
-    ["CASTLE"] = {
-      map_x = 0,
-      background1_x = 0,
-      spawn_x = 0,
-      prev_spawn_x = 0,
-      abs_x = 0,
-      u = nil,
+      foreach(curr_e, function(e) e:update() end)
 
-      init = function(self)
-        w:init()
-        curr_e = {}
-        self.map_x = 0
-        self.background1_x = 0
-        self.u = make_unhold()
-      end,
-
-      update = function(self)
-        w:update(abs(self.map_x))
-        self.u:update()
-
-        foreach(curr_e, function(e) e:update() end)
-
-        for e in all(curr_e) do
-          if (collide(w, e) and w.iframes == 0) then
-            w:hit()
-          end
-        end
-
-        -- collision with custom boss hitbox
-        local boss_collide = collide_rect(w.x, w.y, 8, self.u.x-12, self.u.y-12, 24)
-        if boss_collide and w.iframes == 0 then
+      for e in all(curr_e) do
+        if (collide(w, e) and w.iframes == 0) then
           w:hit()
         end
-
-        -- update the map
-        self.map_x -= SCROLL_SPEED
-        self.abs_x += SCROLL_SPEED
-        self.background1_x -= 0.1
-        if (self.map_x < -128*2) self.map_x = 0
-        if (self.background1_x < -127) self.background1_x = 0
-        if (self.u.beaten) change_scene("GAME_OVER")
-      end,
-
-      draw = function(self)
-        cls()
-        -- map(0, 48, self.map_x, 0, 32, 16)
-        -- map(0, 48, self.map_x + 128*2, 0, 32, 16)
-        w:draw()
-        self.u:draw()
-        foreach(curr_e, function(e) e:draw() end)
-        draw_hp()
       end
-    },
-  }
-  -- change_scene("POST_CAVE")
-  -- change_scene("FORREST")
-  change_scene("CASTLE")
-end
 
+      -- collision with custom boss hitbox
+      local boss_collide = collide_rect(w.x, w.y, 8, self.u.x-12, self.u.y-12, 24)
+      if boss_collide and w.iframes == 0 then
+        w:hit()
+      end
+
+      -- update the map
+      self.map_x -= SCROLL_SPEED
+      self.abs_x += SCROLL_SPEED
+      self.background1_x -= 0.1
+      if (self.map_x < -128*2) self.map_x = 0
+      if (self.background1_x < -127) self.background1_x = 0
+      if (self.u.beaten) change_scene("GAME_OVER")
+    end,
+
+    draw = function(self)
+      cls()
+      -- map(0, 48, self.map_x, 0, 32, 16)
+      -- map(0, 48, self.map_x + 128*2, 0, 32, 16)
+      w:draw()
+      self.u:draw()
+      foreach(curr_e, function(e) e:draw() end)
+      draw_hp()
+    end
+  }
+end
 
 function update_stage(self)
   -- we calculate where the right edge of the screen
@@ -301,7 +312,7 @@ function update_stage(self)
   if (self.spawn_x != self.prev_spawn_x) then
     self.prev_spawn_x = self.spawn_x
 
-    foreach(all_e[CURRENT_STATE][self.spawn_x], function(e) add(curr_e, e)  end)
+    foreach(all_e[CURRENT_STAGE][self.spawn_x], function(e) add(curr_e, e)  end)
   end
 
   -- we need the absolute x-coordinate of the map (in pixels)
@@ -326,11 +337,11 @@ function init_gameloop()
 end
 
 function game_update()
-  game_scenes[CURRENT_STATE]:update()
+  scenes[CURRENT_STAGE]:update()
 end
 
 function game_draw()
-  game_scenes[CURRENT_STATE]:draw()
+  scenes[CURRENT_STAGE]:draw()
   print(DEBUG_MSG, 50, 0)
 end
 
@@ -384,7 +395,7 @@ function init_witch()
     -- our collision flag set.
     local map_collision = false
     local x_offset=flr(map_x/8)
-    local y_offset = MAP_OFFSETS[CURRENT_STATE]
+    local y_offset = MAP_OFFSETS[CURRENT_STAGE]
 
     for x=0,15 do
       for y=0,15 do
@@ -785,10 +796,10 @@ end
 
 function change_scene(next_state)
   -- initialize the state if a function is provided.
-  if(game_scenes[next_state].init) then
-    game_scenes[next_state]:init()
+  if(scenes[next_state].init) then
+    scenes[next_state]:init()
   end
-  CURRENT_STATE = next_state
+  CURRENT_STAGE = next_state
 end
 
 -- code by dw817
