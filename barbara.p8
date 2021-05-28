@@ -239,7 +239,6 @@ function _init()
       prev_spawn_x = 0,
       abs_x = 0,
       u = nil,
-      start_time = nil,
 
       init = function(self)
         w:init()
@@ -247,7 +246,6 @@ function _init()
         self.map_x = 0
         self.background1_x = 0
         self.u = make_unhold()
-        self.start_time = time()
       end,
 
       update = function(self)
@@ -258,9 +256,14 @@ function _init()
 
         for e in all(curr_e) do
           if (collide(w, e) and w.iframes == 0) then
-            sfx(0)
             w:hit()
           end
+        end
+
+        -- collision with custom boss hitbox
+        local boss_collide = collide_rect(w.x, w.y, 8, self.u.x-12, self.u.y-12, 24)
+        if boss_collide and w.iframes == 0 then
+          w:hit()
         end
 
         -- update the map
@@ -269,18 +272,13 @@ function _init()
         self.background1_x -= 0.1
         if (self.map_x < -128*2) self.map_x = 0
         if (self.background1_x < -127) self.background1_x = 0
-        if (time() - self.start_time) > 3 then
-          local beaten = self.u:next_phase()
-          if (beaten) change_scene("GAME_OVER")
-          self.start_time = time()
-        end
+        if (self.u.beaten) change_scene("GAME_OVER")
       end,
-
 
       draw = function(self)
         cls()
-        map(0, 48, self.map_x, 0, 32, 16)
-        map(0, 48, self.map_x + 128*2, 0, 32, 16)
+        -- map(0, 48, self.map_x, 0, 32, 16)
+        -- map(0, 48, self.map_x + 128*2, 0, 32, 16)
         w:draw()
         self.u:draw()
         foreach(curr_e, function(e) e:draw() end)
@@ -314,7 +312,6 @@ function update_stage(self)
 
   for e in all(curr_e) do
     if (collide(w, e) and w.iframes == 0) then
-      sfx(0)
       w:hit()
     end
   end
@@ -435,6 +432,7 @@ function init_witch()
   end
 
   local hit_witch = function(self)
+    sfx(0)
     w.hp -= 1
     w.iframes = 120
     if (w.hp <= 0) then
@@ -498,6 +496,7 @@ end
 
 function update_unhold(self)
   if (self.phase == "BOUNCE") then
+    if(time() - self.t > 6) self:next_phase()
     self.x += self.dx * 1
     self.y += self.dy * 0.5
 
@@ -513,6 +512,7 @@ function update_unhold(self)
   end
 
   if (self.phase == "SPAWN_GHOSTS") then
+    if (time() - self.t > 6) self:next_phase()
 
     if (self.spawn_cooldown == 0) then
       local y_ghost = rndb(20, 100)
@@ -537,6 +537,7 @@ function update_unhold(self)
     if(self.angle > 0.7 and self.angle <= 0.75) then
       self.spin = false
       self.angle = 0.75
+      self:next_phase()
     end
   end
 
@@ -569,7 +570,7 @@ end
 
 function make_unhold()
   return {
-    angle = -0.5,
+    angle = 0.5,
     phase = "BOUNCE",
     spawn_cooldown = 140,
     spin = true,
@@ -578,11 +579,15 @@ function make_unhold()
     y = 50,
     dx = 1,
     dy = 1,
+    t = time(),
+    beaten = false, -- has the boss been beaten yet?
     update = update_unhold,
     draw = draw_unhold,
     -- the last phase should return true so that
     -- the scene knows the boss is finished.
     next_phase = function(self)
+      -- reset the timer
+      self.t = time()
       -- if (self.phase == "SPAWN_GHOSTS") return true
       if (self.phase == "PRE_HORIZONTAL") self.phase = "HORIZONTAL"
       if (self.phase == "SPAWN_GHOSTS") self.phase = "PRE_HORIZONTAL"
@@ -759,6 +764,18 @@ function collide(obj1, obj2)
   then
     return true
   end
+end
+
+function collide_rect (x1, y1, w1, x2, y2, w2)
+  if
+    x1 + w1 > x2 and
+    y1 + w1 > y2 and
+    x1 < x2 + w2 and
+    y1 < y2 + w2
+  then
+    return true
+  end
+
 end
 
 function change_scene(next_state)
