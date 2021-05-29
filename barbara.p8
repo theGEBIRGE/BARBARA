@@ -288,7 +288,7 @@ function init_scenes()
       self.background1_x -= 0.1
       if (self.map_x < -128*2) self.map_x = 0
       if (self.background1_x < -127) self.background1_x = 0
-      if (self.u.beaten) change_scene("GAME_OVER")
+      if (self.u.beaten) change_scene("POST_CASTLE")
     end,
 
     draw = function(self)
@@ -301,6 +301,17 @@ function init_scenes()
       draw_hp()
     end
   }
+
+  scenes["POST_CASTLE"] = {
+    init = function(self)
+    end,
+
+    update = function(self)
+    end,
+    draw = function(self)
+    end,
+  }
+
 end
 
 function update_stage(self)
@@ -488,11 +499,6 @@ function init_enemies()
     [20] = {make_bird(25, 1.0)},
     [23] = {make_bird(55, 1.0), make_snake(96, 1.0)},
     [30] = {make_bird(55, 1.0)},
-    -- [40] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-    -- [45] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-    -- [49] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-    -- [53] = {make_bat(55, 0.75), make_bird(75, 1.0)},
-    -- [70] = {make_bat(55, 0.75), make_bird(75, 1.0)},
   }
 
   all_e["CAVE"] = {
@@ -507,7 +513,7 @@ end
 
 function update_unhold(self)
   if (self.phase == "BOUNCE") then
-    if(time() - self.t > 6) self:next_phase()
+    if(time() - self.t > 15) self:next_phase()
     self.x += self.dx * 1
     self.y += self.dy * 0.5
 
@@ -537,7 +543,7 @@ function update_unhold(self)
   end
 
   if (self.phase == "SPAWN_GHOSTS") then
-    if (time() - self.t > 6) self:next_phase()
+    if (time() - self.t > 15) self:next_phase()
 
     if (self.spawn_cooldown == 0) then
       local y_ghost = rndb(20, 100)
@@ -545,13 +551,13 @@ function update_unhold(self)
       self.spawn_cooldown = 60
     end
 
-
     self.spin_speed = 0.01
     self.spawn_cooldown -= 1
   end
 
   if (self.phase == "PRE_HORIZONTAL") then
     self.spin_speed = 0.01
+    self.dx = 1
     if(self.angle > 0.7 and self.angle <= 0.75) then
       self.spin = false
       self.angle = 0.75
@@ -559,14 +565,35 @@ function update_unhold(self)
     end
   end
 
-
   if (self.phase == "HORIZONTAL") then
-    --TODO: mimic the player movement on the y axis
-    --TODO: lunch towards her/him
-
     if (self.y < w.y) self.y += 1
     if (self.y > w.y) self.y -= 1
 
+    if (time() - self.t > 3) self:next_phase()
+  end
+
+  if (self.phase == "LUNCH") then
+    self.dx += 0.1
+    self.dx = mid (0.1, self.dx, 5.0)
+    self.x -= self.dx
+
+    if (self.x + 16 < 0) then
+      self.dx = 0.1
+      self.lunch_cnt += 1
+      self.x = 140
+      self:next_phase()
+    end
+  end
+
+  if (self.phase == "BEATEN") then
+    self.dx += 0.1
+    self.x -= self.dx
+
+    if (self.x + 16 < 0) self.x = 144
+
+    if (flr(self.dx) == 50) then
+      self.beaten = true
+    end
   end
 
   if (self.spin) then
@@ -578,14 +605,15 @@ end
 
 function draw_unhold(self)
   local sx, sy = (76 % 16) * 8, (76 \ 16) * 8
-  if (self.phase == "BOUNCE" or
+  if  self.phase == "BOUNCE" or
       self.phase == "PRE_SPAWN_GHOSTS" or
       self.phase == "SPAWN_GHOSTS" or
       self.phase == "PRE_HORIZONTAL" or
-      self.phase == "HORIZONTAL") then
+      self.phase == "HORIZONTAL" or
+      self.phase == "LUNCH" or
+      self.phase == "BEATEN" then
     spr_r(sx, sy, self.x, self.y, 4, 4, 0, 0, 16, 16, self.angle, 0)
   end
-
 end
 
 function make_unhold()
@@ -601,6 +629,7 @@ function make_unhold()
     dy = 1,
     t = time(),
     beaten = false, -- has the boss been beaten yet?
+    lunch_cnt = 0,
     update = update_unhold,
     draw = draw_unhold,
     -- the last phase should return true so that
@@ -608,6 +637,14 @@ function make_unhold()
     next_phase = function(self)
       -- reset the timer
       self.t = time()
+
+      -- our final condition for winning
+      if (self.lunch_cnt == 5) then
+        self.phase = "BEATEN"
+      end
+
+      if (self.phase == "LUNCH") self.phase = "PRE_HORIZONTAL"
+      if (self.phase == "HORIZONTAL") self.phase = "LUNCH"
       if (self.phase == "PRE_HORIZONTAL") self.phase = "HORIZONTAL"
       if (self.phase == "SPAWN_GHOSTS") self.phase = "PRE_HORIZONTAL"
       if (self.phase == "PRE_SPAWN_GHOSTS") self.phase = "SPAWN_GHOSTS"
