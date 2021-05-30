@@ -95,9 +95,9 @@ function init_scenes()
       self.background2_x -= 0.1
       self.background3_x -= 0.05
       self.foreground_x -= SCROLL_SPEED
-      -- the foreground map is 4 screens wide
+      -- the main map is 4 screens wide
       if (self.map_x < -128*4) self.map_x = 0
-      if (self.foreground_x < -128 * 2) self.foreground_x = 0
+      if (self.foreground_x < -128*2) self.foreground_x = 0
       -- the backgrounds are each 1 screen wide
       if (self.background1_x < -127) self.background1_x = 0
       if (self.background2_x < -127) self.background2_x = 0
@@ -121,9 +121,6 @@ function init_scenes()
       map(32, 16, self.foreground_x + 128*2, 0, 32, 16)
       draw_hp()
     end,
-
-    draw_map = function(self)
-    end
   }
 
   scenes["POST_FORREST"] = {
@@ -320,9 +317,9 @@ function update_stage(self)
   -- add objects only *once* per map tile
   if (self.spawn_x != self.prev_spawn_x) then
     self.prev_spawn_x = self.spawn_x
-
     foreach(all_e[CURRENT_STAGE][self.spawn_x], function(e) add(curr_e, e)  end)
   end
+  DEBUG_MSG = self.spawn_x
 
   -- we need the absolute x-coordinate of the map (in pixels)
   -- for collision detection.
@@ -497,20 +494,21 @@ function init_enemies()
   curr_e = {}
   all_e = {}
   all_e["FORREST"] = {
-    [18] = {make_snake(96, 0.5)},
-    [19] = {make_bat(55, 2), make_bat(75, 1)},
-    [20] = {make_bird(25, 1.0)},
-    [23] = {make_bird(55, 1.0), make_snake(96, 1.0)},
-    [30] = {make_bird(55, 1.0)},
+    [18] = {snake(96, 0.5)},
+    [20] = {bird(25, 1.0)},
+    [23] = {bird(55, 1.0), snake(96, 1.0)},
+    [30] = {bird(55, 1.0)},
+
+    [200] = {bird(55, 1.0), bird()}
   }
 
   all_e["CAVE"] = {
-    [20] = {make_bat(55, 0.75)},
-    [40] = {make_bat(55, 0.75)},
-    [45] = {make_bat(55, 0.75)},
-    [49] = {make_bat(55, 0.75)},
-    [53] = {make_bat(55, 0.75)},
-    [70] = {make_bat(55, 0.75)},
+    [20] = {bat(55, 0.75)},
+    [40] = {bat(55, 0.75)},
+    [45] = {bat(55, 0.75)},
+    [49] = {bat(55, 0.75)},
+    [53] = {bat(55, 0.75)},
+    [70] = {bat(55, 0.75)},
   }
 end
 
@@ -550,7 +548,7 @@ function update_unhold(self)
 
     if (self.spawn_cooldown == 0) then
       local y_ghost = rndb(20, 100)
-      add(curr_e, make_ghost(y_ghost))
+      add(curr_e, ghost(y_ghost))
       self.spawn_cooldown = 60
     end
 
@@ -682,7 +680,7 @@ function draw_bird(self)
   spr(self.sprites[self.frame], self.x, self.y)
 end
 
-function make_bird(_y, _speed)
+function bird(_y, _speed)
   return {
     tick = 0,
     frame = 1,
@@ -712,7 +710,7 @@ function draw_bat(self)
   palt()
 end
 
-function make_bat(_y, _speed)
+function bat(_y, _speed)
   return {
     tick = 0,
     frame = 1,
@@ -739,7 +737,7 @@ function draw_snake(self)
   palt()
 end
 
-function make_snake(_y, _speed)
+function snake(_y, _speed)
   return {
     tick = 0,
     frame = 1,
@@ -754,31 +752,6 @@ function make_snake(_y, _speed)
 end
 
 -- utilities
-
--- code by doc_robs
--- https://gamedev.docrobs.co.uk/screen-shake-in-pico-8
-function screen_shake()
-  local fade = 0.95
-  local offset_x=16-rnd(32)
-  local offset_y=16-rnd(32)
-
-  offset_x*=CAM_OFFSET
-  offset_y*=CAM_OFFSET
-
-  camera(offset_x,offset_y)
-
-  CAM_OFFSET*=fade
-  if CAM_OFFSET<0.05 then
-    CAM_OFFSET=0.5
-    SHOULD_SHAKE = false
-  end
-end
-
--- code by MBoffin
-function rndb(low,high)
-  return flr(rnd(high-low+1)+low)
-end
-
 function animate(self)
   self.tick=(self.tick+1)%self.step --tick fwd
   if (self.tick==0) self.frame=self.frame%#self.sprites+1
@@ -786,6 +759,8 @@ function animate(self)
 
 function update_ghost(self)
   animate(self)
+
+  if (self.frame == 3) self.spawning = false
 
   if (self.ticks % 60 == 0) then
     local tmp_x = self.x - (flr(rnd(20)) + 10)
@@ -817,13 +792,16 @@ function draw_ghost(self)
   palt()
 end
 
-function make_ghost(_y)
+function ghost(_y)
   return {
     ticks = 0,
     tick = 0,
     frame = 1,
     step = 6,
-    sprites = {112, 113, 114},
+    sprites = spawn_sprites,
+    normal_sprites = {112, 113, 114},
+    spawn_sprites = {115, 116, 117},
+    spawning = true,
     x = 80,
     y = _y,
     update = update_ghost,
@@ -853,7 +831,6 @@ function collide_rect (x1, y1, w1, x2, y2, w2)
   then
     return true
   end
-
 end
 
 function change_scene(next_state)
@@ -862,6 +839,30 @@ function change_scene(next_state)
     scenes[next_state]:init()
   end
   CURRENT_STAGE = next_state
+end
+
+-- code by doc_robs
+-- https://gamedev.docrobs.co.uk/screen-shake-in-pico-8
+function screen_shake()
+  local fade = 0.95
+  local offset_x=16-rnd(32)
+  local offset_y=16-rnd(32)
+
+  offset_x*=CAM_OFFSET
+  offset_y*=CAM_OFFSET
+
+  camera(offset_x,offset_y)
+
+  CAM_OFFSET*=fade
+  if CAM_OFFSET<0.05 then
+    CAM_OFFSET=0.5
+    SHOULD_SHAKE = false
+  end
+end
+
+-- code by MBoffin
+function rndb(low,high)
+  return flr(rnd(high-low+1)+low)
 end
 
 -- code by dw817
@@ -988,14 +989,14 @@ ffffffffffffffff00000000000000000000000011100000111000000000000000000000ddd00000
 7bb0bb377bb0bb37bb0bb37700000000000000000000000000000000000000000000000000000000000000000000000050500999999999000009999999900505
 73b3333b73b3333b3b3333b700000000000000000000000000000000000000000000000000000000000000000000000000000999099999999999999099900000
 77bbbbb377bbbbb37bbbbb3700000000000000000000000000000000000000000000000000000000000000000000000000000099000000009000000099000000
-77777fff77777fff77777fff00000000000000000000000000000000000000000000000000000000000000000000000000000009900000000000000990000000
-777777ff777777ff777777ff00000000000000000000000000000000000000000000000000000000000000000000000000000000990000000000009900000000
-070077ff070077ff070077ff00000000000000000000000000000000000000000000000000000000000000000000000000000000099009000090099000000000
-7777777f0700777f777777ff00000000000000000000000000000000000000000000000000000000000000000000000000000000059999999999995000000000
-7777777777777777777777ff00000000000000000000000000000000000000000000000000000000000000000000000000000000550099999999055500000000
-788e7777788e7777788e777f00000000000000000000000000000000000000000000000000000000000000000000000000000005555500000000555550000000
-f7777777788e7777f777777700000000000000000000000000000000000000000000000000000000000000000000000000000050505050000005050505000000
-fff77777f7777777fff7777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77777fff77777fff77777ffffffffffffffffffff7f77ff700000000000000000000000000000000000000000000000000000009900000000000000990000000
+777777ff777777ff777777fffffffffffff7ffff7ff7f77700000000000000000000000000000000000000000000000000000000990000000000009900000000
+070077ff070077ff070077fffffff7fff7fff7fff77f777f00000000000000000000000000000000000000000000000000000000099009000090099000000000
+7777777f0700777f777777fffff77fffff777fffff7777ff00000000000000000000000000000000000000000000000000000000059999999999995000000000
+7777777777777777777777fffff77ffffff777ff7f77777f00000000000000000000000000000000000000000000000000000000550099999999055500000000
+788e7777788e7777788e777fff7fffffff7f7ff777777ff700000000000000000000000000000000000000000000000000000005555500000000555550000000
+f7777777788e7777f7777777fffffffff7fff7fff7ff77ff00000000000000000000000000000000000000000000000000000050505050000005050505000000
+fff77777f7777777fff77777fffffffffff7ffff7ff7ff7f00000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000005500000000000000660000000888888888888b8883b888888cccccccccccccccc0000000000000000000000000000000000000aaaaaaa000000000000
 000000555500000000000066660000008888888188883888b3888888cc111c1111c111cc00000000000000000000000000000000000aaaaaaaaaaa0000000000
 00000555555000000000066666600000888888138183b3881b388888cc151115511151cc000000000000000000000000000000000aaaa777aaaaaaa600000000
