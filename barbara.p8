@@ -7,8 +7,6 @@ __lua__
 function _init()
   init_globals()
   init_objects()
-  -- change_scene("POST_CAVE")
-  -- change_scene("FORREST")
   change_scene("FORREST")
 end
 
@@ -29,12 +27,8 @@ function init_globals()
   DEBUG_MSG = ""
 
   -- flag definitions
-  f_collision = 0
-  f_damage = 1
-
-  -- used for screen transitions
-  fadedir = 1
-  fadepos = 0
+  F_COLLISION = 0
+  F_DAMAGE = 1
 
   SCROLL_SPEED = 0.5
 end
@@ -418,7 +412,7 @@ function init_witch()
     for x=0,15 do
       for y=0,15 do
         local t = mget(x + x_offset, y + y_offset)
-        local c = fget(t, f_collision)
+        local c = fget(t, F_COLLISION)
         if (c) then
            if
             w.x + 6 > x * 8 and
@@ -427,7 +421,7 @@ function init_witch()
             w.y < y * 8 + 6
           then
             -- did we also take damage?
-            if (fget(t, f_damage) and w.iframes == 0) then
+            if (fget(t, F_DAMAGE) and w.iframes == 0) then
               w:hit()
             end
             map_collision = true
