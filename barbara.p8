@@ -9,7 +9,7 @@ function _init()
   init_objects()
   -- change_scene("POST_CAVE")
   -- change_scene("FORREST")
-  change_scene("CASTLE")
+  change_scene("FORREST")
 end
 
 function init_globals()
@@ -20,6 +20,9 @@ function init_globals()
     ["CAVE"] = 16,
     ["CASTLE"] = 48,
   }
+
+  -- used for screen shake
+  CAM_OFFSET= 0
 
   CURRENT_STAGE = ""
   DEBUG_MSG = ""
@@ -352,6 +355,7 @@ function game_update()
 end
 
 function game_draw()
+  screen_shake()
   scenes[CURRENT_STAGE]:draw()
   print(DEBUG_MSG, 50, 0)
 end
@@ -454,6 +458,7 @@ function init_witch()
   end
 
   local hit_witch = function(self)
+    CAM_OFFSET = 1.0
     sfx(0)
     w.hp -= 1
     w.iframes = 120
@@ -751,6 +756,24 @@ function make_snake(_y, _speed)
 end
 
 -- utilities
+
+-- code by doc_robs
+-- https://gamedev.docrobs.co.uk/screen-shake-in-pico-8
+function screen_shake()
+  local fade = 0.95
+  local offset_x=16-rnd(32)
+  local offset_y=16-rnd(32)
+
+  offset_x*=CAM_OFFSET
+  offset_y*=CAM_OFFSET
+
+  camera(offset_x,offset_y)
+
+  CAM_OFFSET*=fade
+  if CAM_OFFSET<0.05 then
+    CAM_OFFSET=0
+  end
+end
 
 -- code by MBoffin
 function rndb(low,high)
