@@ -574,13 +574,13 @@ function update_unhold(self)
 
   if (self.phase == "LUNCH") then
     self.dx += 0.1
-    self.dx = mid (0.1, self.dx, 5.0)
+    self.dx = mid (0.1, self.dx, 2.0)
     self.x -= self.dx
 
     if (self.x + 16 < 0) then
       self.dx = 0.1
       self.lunch_cnt += 1
-      self.x = 140
+      self.x = 144
       self:next_phase()
     end
   end
@@ -677,7 +677,6 @@ end
 
 function draw_bird(self)
   spr(self.sprites[self.frame], self.x, self.y)
-  -- tweet sporadically
 end
 
 function make_bird(_y, _speed)
