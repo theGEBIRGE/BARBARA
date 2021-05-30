@@ -22,7 +22,8 @@ function init_globals()
   }
 
   -- used for screen shake
-  CAM_OFFSET= 0
+  CAM_OFFSET = 0.5
+  SHOULD_SHAKE = false
 
   CURRENT_STAGE = ""
   DEBUG_MSG = ""
@@ -355,7 +356,9 @@ function game_update()
 end
 
 function game_draw()
-  screen_shake()
+  if (SHOULD_SHAKE) then
+    screen_shake()
+  end
   scenes[CURRENT_STAGE]:draw()
   print(DEBUG_MSG, 50, 0)
 end
@@ -458,11 +461,12 @@ function init_witch()
   end
 
   local hit_witch = function(self)
-    CAM_OFFSET = 1.0
+    SHOULD_SHAKE = true
     sfx(0)
     w.hp -= 1
     w.iframes = 120
     if (w.hp <= 0) then
+      SHOULD_SHAKE = false
       change_scene("GAME_OVER")
     end
   end
@@ -771,7 +775,8 @@ function screen_shake()
 
   CAM_OFFSET*=fade
   if CAM_OFFSET<0.05 then
-    CAM_OFFSET=0
+    CAM_OFFSET=0.5
+    SHOULD_SHAKE = false
   end
 end
 
