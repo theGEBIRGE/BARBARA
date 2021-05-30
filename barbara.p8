@@ -319,7 +319,6 @@ function update_stage(self)
     self.prev_spawn_x = self.spawn_x
     foreach(all_e[CURRENT_STAGE][self.spawn_x], function(e) add(curr_e, e)  end)
   end
-  DEBUG_MSG = self.spawn_x
 
   -- we need the absolute x-coordinate of the map (in pixels)
   -- for collision detection.
@@ -494,12 +493,35 @@ function init_enemies()
   curr_e = {}
   all_e = {}
   all_e["FORREST"] = {
-    [18] = {snake(96, 0.5)},
+    [18] = {snake(0.5)},
     [20] = {bird(25, 1.0)},
-    [23] = {bird(55, 1.0), snake(96, 1.0)},
-    [30] = {bird(55, 1.0)},
-
-    [200] = {bird(55, 1.0), bird()}
+    [23] = {bird(55, 1.0), snake(1.0)},
+    [30] = {bird(30, 0.75), bird(68, 0.6), snake(0.5)},
+    [32] = {bird(77, 2.0), snake(1.0)},
+    [40] = {bird(10, 0.75), bird(55, 1.0)},
+    [50] = {bird(33, 1.50), bird(80, 1.0), snake(1.0)},
+    [58] = {bird(13, 0.75), bird(87, 1.0), snake(0.5)},
+    [65] = {bird(66, 0.5), bird(72, 1.0), snake(1.2)},
+    [71] = {bird(16, 0.75), bird(50, 1.0), snake(1.1)},
+    [77] = {bird(59, 0.75), snake(0.7)},
+    [95] = {bird(55, 0.75), bird(80, 0.7)},
+    [100] = {bird(29, 1.75), bird(79, 1.0)},
+    [108] = {bird(42, 0.6), bird(55, 1.0), snake(1.2)},
+    [112] = {bird(12, 0.75), bird(40, 1.0), snake(1.0)},
+    [120] = {bird(55, 2.75)},
+    [124] = {bird(20, 1.75), snake(1.0)},
+    [132] = {bird(60, 1.5)},
+    [144] = {bird(20, 1.75), bird(60, 1.0), bird(75, 1.3), snake(1.25)},
+    [149] = {snake(1.0)},
+    [155] = {bird(18, 1.0), snake(0.7)},
+    [162] = {bird(33, 1.25), bird(66, 1.2), snake(1.0)},
+    [165] = {bird(40, 1.75)},
+    [175] = {snake(0.8)},
+    [177] = {bird(64, 1.0), snake(1.8)},
+    [185] = {bird(15, 1.5), bird(60, 1.3)},
+    [188] = {bird(35, 1.8), bird(71, 1.3), snake(0.9)},
+    [192] = {bird(20, 1.0), bird(75, 0.9)},
+    [200] = {bird(13, 0.75), bird(53, 0.75), bird(73, 0.75)},
   }
 
   all_e["CAVE"] = {
@@ -737,14 +759,14 @@ function draw_snake(self)
   palt()
 end
 
-function snake(_y, _speed)
+function snake(_speed)
   return {
     tick = 0,
     frame = 1,
     step = 12,
     sprites = {96, 97, 98},
     x = 128,
-    y = _y,
+    y = 96,
     speed = _speed,
     update = update_snake,
     draw = draw_snake
