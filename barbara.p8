@@ -7,7 +7,7 @@ __lua__
 function _init()
   init_globals()
   init_objects()
-  change_scene("CAVE")
+  change_scene("FOREST")
 end
 
 function init_globals()
@@ -418,10 +418,10 @@ function init_witch()
         local c = fget(t, F_COLLISION)
         if (c) then
            if
-            w.x + 6 > x * 8 and
-            w.y + 6 > y * 8 and
-            w.x < x * 8 + 6 and
-            w.y < y * 8 + 6
+            w.x + 5 > x * 8 and
+            w.y + 5 > y * 8 and
+            w.x < x * 8 + 5 and
+            w.y < y * 8 + 5
           then
             -- did we also take damage?
             if (fget(t, F_DAMAGE) and w.iframes == 0) then
