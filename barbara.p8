@@ -7,7 +7,7 @@ __lua__
 function _init()
   init_globals()
   init_objects()
-  change_scene("FOREST")
+  change_scene("CAVE")
 end
 
 function init_globals()
@@ -409,7 +409,7 @@ function init_witch()
     -- and see if barbara collides with any of them that have
     -- our collision flag set.
     local map_collision = false
-    local x_offset=flr(map_x/8)
+    local x_offset= flr(map_x/8)
     local y_offset = MAP_OFFSETS[CURRENT_STAGE]
 
     for x=0,15 do
@@ -446,6 +446,7 @@ function init_witch()
       -- so we multiply the current direction (either 1 or -1)
       -- with the distance that we want the player to travel
       -- for resetting.
+      self.dy = 0
       self.y += (self.dir * 3.0)
     end
 
