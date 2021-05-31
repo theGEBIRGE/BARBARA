@@ -3,18 +3,18 @@ version 32
 __lua__
 -- BARBARA
 -- by FREDERIC LINN
---
+
 function _init()
   init_globals()
   init_objects()
-  change_scene("FORREST")
+  change_scene("FOREST")
 end
 
 function init_globals()
   -- the y-offset of the map per stage.
   -- used for getting the correct map tile flags.
   MAP_OFFSETS = {
-    ["FORREST"] = 0,
+    ["FOREST"] = 0,
     ["CAVE"] = 16,
     ["CASTLE"] = 48,
   }
@@ -43,6 +43,9 @@ function init_scenes()
   scenes = {}
 
   scenes["GAME_OVER"] = {
+    init = function()
+      music(-1, 300)
+    end,
     update = function()
       if(btn(5)) _init()
     end,
@@ -52,7 +55,7 @@ function init_scenes()
     end
   }
 
-  scenes["FORREST"] = {
+  scenes["FOREST"] = {
     map_x = 0,
     background1_x = 0,
     background2_x = 0,
@@ -84,8 +87,8 @@ function init_scenes()
     update = update_stage,
 
     ended = function(self)
-      -- check if we reached the end of the forrest
-      if (self.spawn_x == 216) change_scene("POST_FORREST")
+      -- check if we reached the end of the forest
+      if (self.spawn_x == 216) change_scene("POST_FOREST")
     end,
 
     update_map = function(self)
@@ -115,6 +118,8 @@ function init_scenes()
       map(0, 0, self.map_x, 0, 64, 16)
       map(0, 0, self.map_x + 128 * 4, 0, 64, 16)
       palt()
+
+      if (self.spawn_x < 30) print("FOREST", 50, 10, 7)
       foreach(curr_e, function(e) e:draw() end)
       w:draw()
       map(32, 16, self.foreground_x, 0, 32, 16)
@@ -123,7 +128,7 @@ function init_scenes()
     end,
   }
 
-  scenes["POST_FORREST"] = {
+  scenes["POST_FOREST"] = {
     irisd = -1,
     irisi = 92,
     update = function(self)
@@ -168,6 +173,7 @@ function init_scenes()
     abs_x = 0,
 
     init = function(self)
+      music(0)
       curr_e = {}
       self.map_x = 0
       self.background1_x = 0
@@ -202,6 +208,7 @@ function init_scenes()
       map(0, 16, self.map_x, 0, 32, 16)
       map(0, 16, self.map_x + 128 * 2, 0, 32, 16)
       palt()
+      if (self.spawn_x < 30) print("CAVE", 55, 10, 7)
       foreach(curr_e, function(e) e:draw() end)
       w:draw()
       draw_hp()
@@ -441,6 +448,9 @@ function init_witch()
       -- for resetting.
       self.y += (self.dir * 3.0)
     end
+
+    add(self.trail, trail_particle(self.x - 2, self.y + 5))
+    foreach(self.trail, function(p) p:update() end)
   end
 
   local draw_witch = function(self)
@@ -448,11 +458,13 @@ function init_witch()
     if (self.iframes % 2 == 0) then
       spr(self.sprites[self.frame], self.x, self.y)
     end
+
+    foreach(self.trail, function(p) p:draw() end)
   end
 
   local hit_witch = function(self)
     SHOULD_SHAKE = true
-    sfx(0)
+    -- sfx(0)
     w.hp -= 1
     w.iframes = 120
     if (w.hp <= 0) then
@@ -462,6 +474,7 @@ function init_witch()
   end
 
   local init_witch = function(self)
+    self.trail = {}
     self.x = 20
     self.y = 50
     self.dy = 0
@@ -489,10 +502,37 @@ function init_witch()
   }
 end
 
+function draw_trail(self)
+  circ(self.x, self.y, self.r, 10)
+end
+
+function update_trail(self)
+  self.d -= 0.01
+  self.r -= 0.1
+  self.x -= rndb(0.5, 0.8)
+  if (self.r <= 0) del(w.trail, self)
+end
+
+function trail_particle(_x, _y)
+  -- we want to be able to go below
+  -- and above the current y coordinate.
+  local dir = {-1, 1}
+  local sel_dir = flr(rnd(2)) + 1
+
+  return {
+    x = _x,
+    y = _y - (dir[sel_dir] * flr(rnd(3))),
+    d = rndb(0.15, 0.25),
+    r = flr(rndb(1, 2)),
+    draw = draw_trail,
+    update = update_trail,
+  }
+end
+
 function init_enemies()
   curr_e = {}
   all_e = {}
-  all_e["FORREST"] = {
+  all_e["FOREST"] = {
     [18] = {snake(0.5)},
     [20] = {bird(25, 1.0)},
     [23] = {bird(55, 1.0), snake(1.0)},
@@ -1115,8 +1155,12 @@ b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2
 2510101010101010101010101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1010101010101010101010101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
-000500002b750337502d75027750237501f7001b700177000e7000e7001170013700067001570017700007001a7001c7001d700207001d700227001f7002570027700297002b7002c7002d7002f7002b7002c700
-001000000000025050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0010000039110351003411034110000003a1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+c010000219053337002d70027700237001f7001b700177000e7000e7001170013700067001570017700007001a7001c7001d700207001d700227001f7002570027700297002b7002c7002d7002f7002b7002c700
+00100000100000e000110000d0001700019051150000e0002400016000060000a000130001800016000110000d00016000110002300023000230001c0000d000230001c0002300018000260001c0002300018000
+6f0d000000000167001a7001f70022700287002d7002f70034700397001625011200292000a6003a700162502d70028700227001f7001d7001c7001c7001d7001d7001e7001e7001e7001e700000000000000000
+201600002b6002860024600226001e60000000290000e6000c6000a600096000860007600086000760015600146001c6001a60019600186001760000000000000000000000000000000000000000000000000000
+0010000039100351003410034100000003a1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+__music__
+02 00414344
+00 43424344
+
