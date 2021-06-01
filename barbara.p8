@@ -23,7 +23,7 @@ function init_globals()
   CAM_OFFSET = 0.5
   SHOULD_SHAKE = false
 
-  CURRENT_STAGE = ""
+  CURRENT_SCENE = ""
   DEBUG_MSG = ""
 
   -- flag definitions
@@ -323,7 +323,7 @@ function update_stage(self)
   -- add objects only *once* per map tile
   if (self.spawn_x != self.prev_spawn_x) then
     self.prev_spawn_x = self.spawn_x
-    foreach(all_e[CURRENT_STAGE][self.spawn_x], function(e) add(curr_e, e)  end)
+    foreach(all_e[CURRENT_SCENE][self.spawn_x], function(e) add(curr_e, e)  end)
   end
 
   -- we need the absolute x-coordinate of the map (in pixels)
@@ -348,14 +348,14 @@ function init_gameloop()
 end
 
 function game_update()
-  scenes[CURRENT_STAGE]:update()
+  scenes[CURRENT_SCENE]:update()
 end
 
 function game_draw()
   if (SHOULD_SHAKE) then
     screen_shake()
   end
-  scenes[CURRENT_STAGE]:draw()
+  scenes[CURRENT_SCENE]:draw()
   print(DEBUG_MSG, 50, 0)
 end
 
@@ -409,7 +409,7 @@ function init_witch()
     -- our collision flag set.
     local map_collision = false
     local x_offset= flr(map_x/8)
-    local y_offset = MAP_OFFSETS[CURRENT_STAGE]
+    local y_offset = MAP_OFFSETS[CURRENT_SCENE]
 
     for x=0,15 do
       for y=0,15 do
@@ -523,7 +523,7 @@ function trail_particle(_x, _y)
     x = _x,
     y = _y - (dir[sel_dir] * flr(rnd(3))),
     d = rndb(0.15, 0.25),
-    r = flr(rndb(1, 2)),
+    r = rndb(1, 2),
     draw = draw_trail,
     update = update_trail,
   }
@@ -536,7 +536,7 @@ function init_enemies()
     [18] = {snake(0.5)},
     [20] = {bird(25, 1.0)},
     [23] = {bird(55, 1.0), snake(1.0)},
-    [30] = {bird(30, 0.75), bird(68, 0.6), snake(0.5)},
+    [30] = {bird(68, 0.6), snake(0.5)},
     [32] = {bird(77, 2.0), snake(1.0)},
     [40] = {bird(10, 0.75), bird(55, 1.0)},
     [50] = {bird(33, 1.50), bird(80, 1.0), snake(1.0)},
@@ -606,12 +606,12 @@ function update_unhold(self)
   end
 
   if (self.phase == "SPAWN_GHOSTS") then
-    if (time() - self.t > 15) self:next_phase()
+    if (time() - self.t > 15 and #curr_e == 0) self:next_phase()
 
-    if (self.spawn_cooldown == 0) then
-      local y_ghost = rndb(20, 100)
+    if (not(time() - self.t > 15) and self.spawn_cooldown == 0) then
+      local y_ghost = rndb(10, 120)
       add(curr_e, ghost(y_ghost))
-      self.spawn_cooldown = 60
+      self.spawn_cooldown = 120
     end
 
     self.spin_speed = 0.01
@@ -739,15 +739,22 @@ function update_bird(self)
 end
 
 function draw_bird(self)
+  pal(6, self.color)
   spr(self.sprites[self.frame], self.x, self.y)
+  pal()
 end
 
 function bird(_y, _speed)
+  -- choose a random color
+  local colors = {6, 13, 15}
+  local i = rndb(1, 3)
+
   return {
     tick = 0,
     frame = 1,
     step = 6,
     sprites = {64, 65, 66},
+    color = colors[i],
     base_y = _y,
     -- always spawn just outside the view port
     x = 128,
@@ -820,6 +827,8 @@ function animate(self)
 end
 
 function update_ghost(self)
+  if (self.x < -8) del(curr_e, self)
+
   if (self.state == "SPAWN") then
     self.sprites = self.spawn_sprites
     if (self.frame == 3) self:next_state()
@@ -827,7 +836,7 @@ function update_ghost(self)
 
   if (self.state == "NORMAL") then
     self.sprites = self.normal_sprites
-    if (flr(self.ticks / 60) == 2) self:next_state()
+    if (flr(self.ticks / 60) == 1) self:next_state()
   end
 
   animate(self)
@@ -845,7 +854,7 @@ end
 function next_ghost_state(self)
   self.ticks = 0
   if (self.state == "NORMAL") then
-    local tmp_y = flr(rndb(self.y - 8, self.y + 8))
+    local tmp_y = rndb(self.y - 8, self.y + 8)
     self.y = mid(0, tmp_y, 120)
     self.x -=  rndb(10, 30)
     self.state = "SPAWN"
@@ -901,7 +910,7 @@ function change_scene(next_state)
   if(scenes[next_state].init) then
     scenes[next_state]:init()
   end
-  CURRENT_STAGE = next_state
+  CURRENT_SCENE = next_state
 end
 
 -- code by doc_robs
