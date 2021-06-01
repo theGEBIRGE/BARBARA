@@ -313,7 +313,6 @@ function init_scenes()
     draw = function(self)
     end,
   }
-
 end
 
 function update_stage(self)
@@ -818,32 +817,20 @@ end
 function animate(self)
   self.tick=(self.tick+1)%self.step --tick fwd
   if (self.tick==0) self.frame=self.frame%#self.sprites+1
-  end
+end
 
 function update_ghost(self)
-  animate(self)
-
-  if (self.frame == 3) self.spawning = false
-
-  if (self.ticks % 60 == 0) then
-    local tmp_x = self.x - (flr(rnd(20)) + 10)
-    self.x = tmp_x
-
-    local tmp_y
-    repeat
-      local up = flr(rnd(2))
-      local distance = flr(rnd(8))
-
-      if (up == 1) then
-        tmp_y = self.y + distance
-      else
-        tmp_y = self.y - distance
-      end
-    until (tmp_y > 0 and tmp_y < 128)
-
-    self.y = tmp_y
+  if (self.state == "SPAWN") then
+    self.sprites = self.spawn_sprites
+    if (self.frame == 3) self:next_state()
   end
 
+  if (self.state == "NORMAL") then
+    self.sprites = self.normal_sprites
+    if (flr(self.ticks / 60) == 2) self:next_state()
+  end
+
+  animate(self)
   self.ticks += 1
 end
 
@@ -855,20 +842,33 @@ function draw_ghost(self)
   palt()
 end
 
+function next_ghost_state(self)
+  self.ticks = 0
+  if (self.state == "NORMAL") then
+    local tmp_y = flr(rndb(self.y - 8, self.y + 8))
+    self.y = mid(0, tmp_y, 120)
+    self.x -=  rndb(10, 30)
+    self.state = "SPAWN"
+  elseif (self.state == "SPAWN") then
+    self.state = "NORMAL"
+  end
+end
+
 function ghost(_y)
   return {
     ticks = 0,
     tick = 0,
     frame = 1,
-    step = 6,
-    sprites = spawn_sprites,
+    step = 12,
+    sprites = nil,
     normal_sprites = {112, 113, 114},
     spawn_sprites = {115, 116, 117},
-    spawning = true,
+    state = "SPAWN",
     x = 80,
     y = _y,
     update = update_ghost,
-    draw = draw_ghost
+    draw = draw_ghost,
+    next_state = next_ghost_state,
   }
 end
 
