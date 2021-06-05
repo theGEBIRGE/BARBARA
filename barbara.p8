@@ -7,7 +7,7 @@ __lua__
 function _init()
   init_globals()
   init_objects()
-  change_scene("CAVE")
+  change_scene("CASTLE")
 end
 
 function init_globals()
@@ -22,6 +22,9 @@ function init_globals()
   -- used for screen shake
   CAM_OFFSET = 0.5
   SHOULD_SHAKE = false
+
+  -- enemy sounds
+  SFX_COOLDOWN = 0
 
   CURRENT_SCENE = ""
   DEBUG_MSG = ""
@@ -173,7 +176,6 @@ function init_scenes()
     abs_x = 0,
 
     init = function(self)
-      music(0)
       curr_e = {}
       self.map_x = 0
       self.background1_x = 0
@@ -263,7 +265,7 @@ function init_scenes()
       curr_e = {}
       self.map_x = 0
       self.background1_x = 0
-      self.u = make_unhold()
+      self.u = unhold()
     end,
 
     update = function(self)
@@ -338,6 +340,16 @@ function update_stage(self)
     end
   end
 
+  -- play enemy sound
+  if (#curr_e > 0  and SFX_COOLDOWN <= 0) then
+    local i = rndb(1, #curr_e)
+    if (curr_e[i].sound) then
+      curr_e[i]:sound()
+      SFX_COOLDOWN = rndb(180, 240)
+    end
+  end
+
+  SFX_COOLDOWN -= 1
   self:update_map()
   self:ended()
 end
@@ -426,6 +438,7 @@ function init_witch()
             if (fget(t, F_DAMAGE) and w.iframes == 0) then
               w:hit()
             end
+            sfx(2)
             map_collision = true
           end
         end
@@ -464,7 +477,7 @@ function init_witch()
 
   local hit_witch = function(self)
     SHOULD_SHAKE = true
-    -- sfx(0)
+    sfx(1)
     w.hp -= 1
     w.iframes = 120
     if (w.hp <= 0) then
@@ -650,6 +663,7 @@ function update_unhold(self)
   end
 
   if (self.phase == "HORIZONTAL") then
+    sfx(0)
     if (self.y < w.y) self.y += 1
     if (self.y > w.y) self.y -= 1
 
@@ -700,10 +714,10 @@ function draw_unhold(self)
   end
 end
 
-function make_unhold()
+function unhold()
   return {
     angle = 0.5,
-    phase = "BOUNCE",
+    phase = "PRE_SPAWN_GHOSTS",
     spawn_cooldown = 140,
     spin = true,
     spin_speed = 0,
@@ -765,6 +779,10 @@ function draw_bird(self)
   pal()
 end
 
+function make_sound(self)
+  if (self.sfx) sfx(self.sfx)
+end
+
 function bird(_y, _speed)
   -- choose a random color
   local colors = {6, 13, 15}
@@ -779,8 +797,11 @@ function bird(_y, _speed)
     base_y = _y,
     -- always spawn just outside the view port
     x = 128,
+    sfx = 3,
     y = _y,
     y_dir = "DOWN",
+    sfx = 3,
+    sound = make_sound,
     speed = _speed,
     update = update_bird,
     draw = draw_bird,
@@ -808,6 +829,8 @@ function bat(_y, _speed)
     sprites = {80, 81, 82},
     x = 128,
     y = _y,
+    sfx = 4,
+    sound = make_sound,
     speed = _speed,
     update = update_bat,
     draw = draw_bat
@@ -879,6 +902,7 @@ function next_ghost_state(self)
     self.y = mid(0, tmp_y, 120)
     self.x -=  rndb(10, 30)
     self.state = "SPAWN"
+    sfx(self.sfx)
   elseif (self.state == "SPAWN") then
     self.state = "NORMAL"
   end
@@ -896,6 +920,7 @@ function ghost(_y)
     state = "SPAWN",
     x = 80,
     y = _y,
+    sfx = 5,
     update = update_ghost,
     draw = draw_ghost,
     next_state = next_ghost_state,
@@ -1186,11 +1211,12 @@ b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2
 2510101010101010101010101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1010101010101010101010101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
-c010000219053337002d70027700237001f7001b700177000e7000e7001170013700067001570017700007001a7001c7001d700207001d700227001f7002570027700297002b7002c7002d7002f7002b7002c700
-00100000100000e000110000d0001700019051150000e0002400016000060000a000130001800016000110000d00016000110002300023000230001c0000d000230001c0002300018000260001c0002300018000
-6f0d000000000167001a7001f70022700287002d7002f70034700397001625011200292000a6003a700162502d70028700227001f7001d7001c7001c7001d7001d7001e7001e7001e7001e700000000000000000
-201600002b6002860024600226001e60000000290000e6000c6000a600096000860007600086000760015600146001c6001a60019600186001760000000000000000000000000000000000000000000000000000
-0010000039100351003410034100000003a1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+860c00000d61010610136101562017620196201b6201d6201e62020620226302563027630296402c640186001a6001b6001c600256001f6002060021600236002d6002f6002b6002c60000600006000060000600
+000500002b17025160241202c1002a10025101241002e1002b1002e1003110033100131001810016100111000d10016100111002310023100231001c1000d100231001c1002310018100261001c1002310018100
+a2070000126500e62009620066100462003620036001f6001a6001c6002160011600296000a6003a600166002d60028600226001f6001d6001c6001c6001d6001d6001e6001e6001e6001e600006000060000600
+160a0000385173850737507385171c507001073d70739507295073b5073d5072f50731507305072f5072d5072c5072a50728507265071850724507225071e507205071f5071f5071c50717507135070f50700500
+4e080000381200900009000090000b00038100080000700007000100000f0000e0000d0000d000040000d0000d000381200d0000d0000a0000d000120000d000110000d0000d0000d0000d0000d0000e0002c000
+c1040000181161a1161d11620116231162611629116292062c1062e10631106321063410635106371063710600006000060000600006000060000600006000060000600006000060000600006000060000600006
 __music__
 02 00414344
 00 43424344
