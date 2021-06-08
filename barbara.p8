@@ -7,7 +7,7 @@ __lua__
 function _init()
   init_globals()
   init_objects()
-  change_scene("CASTLE")
+  change_scene("PRE_CASTLE")
 end
 
 function init_globals()
@@ -310,13 +310,96 @@ function init_scenes()
   }
 
   scenes["POST_CASTLE"] = {
+    sparks = {},
+    fireworks = {},
+    t,
+    curr_firework = 1,
     init = function(self)
+      self.t = time()
+
+      self.fireworks = {
+        {64, 64, 5, 200},
+        {20, 35, 2, 200},
+        {80, 100, 5, 100},
+        {64, 33, 3, 100},
+        {80, 88, 5, 200},
+      }
+
+      for i=1,200 do
+        local p = {
+          x = 0,
+          y = 0,
+          velx = 0,
+          vely = 0,
+          r = 0,
+          mass = 0,
+          alive = false
+        }
+        add(self.sparks, p)
+      end
+
     end,
 
     update = function(self)
+      -- create an explosion every second.
+      -- change scene if there are no more left.
+      if(time() - self.t > 1) then
+        if (not self.fireworks[self.curr_firework]) then
+          change_scene("GAME_OVER")
+          return
+        end
+        self:explode(unpack(self.fireworks[self.curr_firework]))
+        self.curr_firework += 1
+        self.t = time()
+      end
+
+      local sparks = self.sparks
+      for i=1, #sparks do
+        if sparks[i].alive then
+          sparks[i].x += sparks[i].velx / sparks[i].mass
+          sparks[i].y += sparks[i].vely / sparks[i].mass
+          sparks[i].r -= 0.1
+          if sparks[i].r < 0.1 then
+            sparks[i].alive = false
+          end
+        end
+      end
     end,
+
     draw = function(self)
+      cls()
+
+      local sparks = self.sparks
+      for i=1, #sparks do
+        if sparks[i].alive then
+          circfill(sparks[i].x, sparks[i].y, sparks[i].r, 10)
+        end
+      end
     end,
+
+    -- code by mikamulperi
+    -- https://www.youtube.com/watch?v=UIZO1TKPlzY
+    explode = function(self, x, y, r, particles)
+      sfx(8)
+      local sparks = self.sparks
+      local selected = 0
+      for i=1, #sparks do
+        if (not sparks[i].alive) then
+            sparks[i].x = x
+            sparks[i].y = y
+            sparks[i].vely = -1 + rnd(2)
+            sparks[i].velx = -1 + rnd(2)
+            sparks[i].r = 0.5 + rnd(r)
+            sparks[i].mass = 0.5 + rnd(2)
+            sparks[i].alive = true
+
+            selected += 1
+            if selected == particles then
+              break
+            end
+          end
+      end
+    end
   }
 end
 
@@ -971,12 +1054,12 @@ function collide_rect (x1, y1, w1, x2, y2, w2)
   end
 end
 
-function change_scene(next_state)
+function change_scene(next_scene)
   -- initialize the state if a function is provided.
-  if(scenes[next_state].init) then
-    scenes[next_state]:init()
+  if(scenes[next_scene].init) then
+    scenes[next_scene]:init()
   end
-  CURRENT_SCENE = next_state
+  CURRENT_SCENE = next_scene
 end
 
 -- code by doc_robs
@@ -1243,6 +1326,7 @@ a2070000126500e62009620066100462003620036001f6001a6001c6002160011600296000a6003a
 c1040000181161a1161d11620116231162611629116292062c1062e10631106321063410635106371063710600006000060000600006000060000600006000060000600006000060000600006000060000600006
 1e0700000c2510d25115201192010f25110251262012a201212010f251112511a20137201362011b2011a2011a2013220131201312013120131201312012a2010020100201002010020100201002010020100201
 001000003f6233c613326133162300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003
+030300002363123631236312363123631236311963119631196312263122631216311f6311d63118631136310f6310c6310a63108631036310060100001000010000100001000010000100001000010000100001
 __music__
 02 00414344
 00 43424344
