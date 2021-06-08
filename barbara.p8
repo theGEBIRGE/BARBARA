@@ -7,7 +7,7 @@ __lua__
 function _init()
   init_globals()
   init_objects()
-  change_scene("PRE_CASTLE")
+  change_scene("CASTLE")
 end
 
 function init_globals()
@@ -122,7 +122,7 @@ function init_scenes()
       map(0, 0, self.map_x + 128 * 4, 0, 64, 16)
       palt()
 
-      if (self.spawn_x < 30) print("FOREST", 50, 10, 7)
+      if (self.spawn_x < 30) print("WALD", 50, 10, 7)
       foreach(curr_e, function(e) e:draw() end)
       w:draw()
       map(32, 16, self.foreground_x, 0, 32, 16)
@@ -210,7 +210,7 @@ function init_scenes()
       map(0, 16, self.map_x, 0, 32, 16)
       map(0, 16, self.map_x + 128 * 2, 0, 32, 16)
       palt()
-      if (self.spawn_x < 30) print("CAVE", 55, 10, 7)
+      if (self.spawn_x < 30) print("BERG", 55, 10, 7)
       foreach(curr_e, function(e) e:draw() end)
       w:draw()
       draw_hp()
@@ -315,7 +315,7 @@ function init_scenes()
     t,
     curr_firework = 1,
     init = function(self)
-      self.t = time()
+      self.t = 0
 
       self.fireworks = {
         {64, 64, 5, 200},
@@ -344,7 +344,8 @@ function init_scenes()
       -- create an explosion every second.
       -- change scene if there are no more left.
       if(time() - self.t > 1) then
-        if (not self.fireworks[self.curr_firework]) then
+        if (not self.fireworks
+        [self.curr_firework]) then
           change_scene("GAME_OVER")
           return
         end
@@ -695,6 +696,12 @@ function init_enemies()
 end
 
 function update_unhold(self)
+  if (self.phase == "APPEAR") then
+    if(time() - self.t > 3) self:next_phase()
+    self.x = 106
+    self.y = 23
+ end
+
   if (self.phase == "BOUNCE") then
     if(time() - self.t > 15) self:next_phase()
     self.x += self.dx * 1
@@ -744,7 +751,7 @@ function update_unhold(self)
   end
 
   if (self.phase == "PRE_HORIZONTAL") then
-    self.spin_speed = 0.01
+    self.spin_speed = 0.05
     self.dx = 1
     if(self.angle > 0.7 and self.angle <= 0.75) then
       self.spin = false
@@ -762,8 +769,8 @@ function update_unhold(self)
 
   if (self.phase == "LUNCH") then
     sfx(0)
-    self.dx += 0.1
-    self.dx = mid (0.1, self.dx, 2.0)
+    self.dx += 0.05
+    self.dx = mid (0.05, self.dx, 1.5)
     self.x -= self.dx
 
     if (self.x + 16 < 0) then
@@ -790,7 +797,7 @@ function update_unhold(self)
     self.angle += self.spin_speed
     if (self.angle > 1.5) self.angle = 0.5
   end
-
+  self.ticks += 1
 end
 
 function draw_unhold(self)
@@ -804,7 +811,8 @@ function draw_unhold(self)
     pal(11, 0)
   end
 
-  if self.phase == "BOUNCE" or
+  -- if self.phase == "APPEAR" or
+    if self.phase == "BOUNCE" or
     self.phase == "PRE_SPAWN_GHOSTS" or
     self.phase == "SPAWN_GHOSTS" or
     self.phase == "PRE_HORIZONTAL" or
@@ -814,13 +822,21 @@ function draw_unhold(self)
     spr_r(sx, sy, self.x, self.y, 4, 4, 0, 0, 16, 16, self.angle, 0)
   end
 
+  if self.phase == "APPEAR" then
+    if (self.ticks % 8 == 0) then
+      cls(10)
+      spr_r(sx, sy, self.x, self.y, 4, 4, 0, 0, 16, 16, self.angle, 0)
+    end
+  end
+
   pal()
 end
 
 function unhold()
   return {
+    ticks = 0,
     angle = 0.5,
-    phase = "BOUNCE",
+    phase = "HORIZONTAL",
     spawn_cooldown = 140,
     spin = true,
     spin_speed = 0,
@@ -838,6 +854,7 @@ function unhold()
     next_phase = function(self)
       -- reset the timer
       self.t = time()
+      self.ticks = 0
 
       -- our final condition for winning
       if (self.lunch_cnt == 5) then
@@ -850,6 +867,7 @@ function unhold()
       if (self.phase == "SPAWN_GHOSTS") self.phase = "PRE_HORIZONTAL"
       if (self.phase == "PRE_SPAWN_GHOSTS") self.phase = "SPAWN_GHOSTS"
       if (self.phase == "BOUNCE") self.phase = "PRE_SPAWN_GHOSTS"
+      if (self.phase == "APPEAR") self.phase = "BOUNCE"
     end
   }
 end
@@ -1327,6 +1345,7 @@ c1040000181161a1161d11620116231162611629116292062c1062e1063110632106341063510637
 1e0700000c2510d25115201192010f25110251262012a201212010f251112511a20137201362011b2011a2011a2013220131201312013120131201312012a2010020100201002010020100201002010020100201
 001000003f6233c613326133162300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003
 030300002363123631236312363123631236311963119631196312263122631216311f6311d63118631136310f6310c6310a63108631036310060100001000010000100001000010000100001000010000100001
+000500000b4500b4500b4500b450054500b4500b4500b4500e4500b4500b4500b450174500b4500b4500b4500b4500b4500c4500c4500c4503045030450004000040000400004000040000400004000040000400
 __music__
 02 00414344
 00 43424344
