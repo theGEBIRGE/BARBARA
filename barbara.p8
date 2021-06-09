@@ -48,38 +48,32 @@ function init_scenes()
   scenes = {}
 
   scenes["START"] = {
-    ticks = 0,
-    map_x = 0,
-    foreground_x = 0,
-    background1_x = 0,
-    background2_x = 0,
-    background3_x = 128,
-    color_letter = 1,
-    letters = {
-      {spr = 67, x = 2}, -- B
-      {spr = 69, x = 20}, -- A
-      {spr = 71, x = 38}, -- R
-      {spr = 67, x = 56}, -- B
-      {spr = 69, x = 74}, -- A
-      {spr = 71, x = 92}, -- R
-      {spr = 69, x = 110}, -- A
-    },
     init = function(self)
       self.ticks = 0
+      self.curr_star = 1
+      self.letters = {
+        {spr = 67, x = 2}, -- B
+        {spr = 69, x = 20}, -- A
+        {spr = 71, x = 38}, -- R
+        {spr = 67, x = 56}, -- B
+        {spr = 69, x = 74}, -- A
+        {spr = 71, x = 92}, -- R
+        {spr = 69, x = 110}, -- A
+      }
+
       self.map_x = 0
       self.color_letter = 0
       self.foreground_x = 0
       self.background1_x = 0
       self.background2_x = 0
-      self.background3_x = 128
     end,
+
     update = function(self)
       if(btn(5)) change_scene("FOREST")
 
       self.map_x -= SCROLL_SPEED
       self.background1_x -= 0.25
       self.background2_x -= 0.1
-      self.background3_x -= 0.05
       self.foreground_x -= SCROLL_SPEED
       -- the main map is 4 screens wide
       if (self.map_x < -128*4) self.map_x = 0
@@ -91,12 +85,16 @@ function init_scenes()
       if (self.ticks % 20 == 0) then
         self.color_letter = (self.color_letter % 7) + 1
       end
+
+      if (self.ticks % rndb(18, 24) == 0) then
+        self.curr_star = {x = rndb(2, 124), y = rndb(2, 30)}
+      end
+
       self.ticks += 1
     end,
 
     draw = function(self)
       cls(12)
-      map(96, 0, self.background3_x, 0, 32, 16)
       map(80, 0, self.background2_x, 0, 16, 16)
       map(80, 0, self.background2_x + 128, 0, 16, 16)
       map(64, 0, self.background1_x + 128, 0, 16, 16)
@@ -107,50 +105,45 @@ function init_scenes()
       map(0, 0, self.map_x + 128 * 4, 0, 64, 16)
       palt()
 
+
       for i=1, #self.letters do
         -- we want to highlight one letter.
-        if (i == self.color_letter) pal(2, 10)
+        if (i == self.color_letter) pal(14, 10)
 
         local sx, sy = get_sprite_coordinates(self.letters[i].spr)
         sspr(sx, sy, 16, 16, self.letters[i].x, 4, 16, 24)
         pal()
       end
 
+      circfill(self.curr_star.x, self.curr_star.y, 1, 10)
+
       map(32, 16, self.foreground_x, 0, 32, 16)
       map(32, 16, self.foreground_x + 128*2, 0, 32, 16)
 
-      print("LOS GEHTS", 44, 70, 10)
-      print("❎", 56, 78, 10)
+      print("LOS GEHTS", 44, 80, 10)
+      print("❎", 56, 86, 10)
     end
   }
 
   scenes["FOREST"] = {
-    map_x = 0,
-    foreground_x = 0,
-    background1_x = 0,
-    background2_x = 0,
-    background3_x = 128,
-    -- the current position on the map (in tiles, not pixels)
-    -- takes scrolling into account.
-    -- used for spawning objects at specific points.
-    spawn_x = 0,
-    prev_spawn_x = 0,
-    -- the maps are looping, so their x-coordinates
-    -- can't be used for calculating our spawn points.
-    -- we need an ever-increasing counter
-    abs_x = 0,
-
     init = function(self)
-      curr_e = {}
       self.map_x = 0
       self.foreground_x = 0
       self.background1_x = 0
       self.background2_x = 0
       self.background3_x = 128
+      -- the current position on the map (in tiles, not pixels)
+      -- takes scrolling into account.
+      -- used for spawning objects at specific points.
       self.spawn_x = 0
       self.prev_spawn_x = 0
+      -- the maps are looping, so their x-coordinates
+      -- can't be used for calculating our spawn points.
+      -- we need an ever-increasing counter
       self.abs_x = 0
+
       w:init()
+      curr_e = {}
       init_enemies()
     end,
 
@@ -240,20 +233,14 @@ function init_scenes()
   }
 
   scenes["CAVE"] = {
-    map_x = 0,
-    background1_x = 0,
-    spawn_x = 0,
-    prev_spawn_x = 0,
-    abs_x = 0,
-
     init = function(self)
-      curr_e = {}
       self.map_x = 0
       self.background1_x = 0
       self.spawn_x = 0
       self.prev_spawn_x = 0
       self.abs_x = 0
       w:init()
+      curr_e = {}
       init_enemies()
     end,
 
@@ -289,8 +276,10 @@ function init_scenes()
   }
 
   scenes["POST_CAVE"] = {
-    irisd = -1,
-    irisi = 92,
+    init = function(self)
+      self.irisd = -1
+      self.irisi = 92
+    end,
     update = function(self)
       if (self.irisi == 0) change_scene("PRE_CASTLE")
     end,
@@ -302,9 +291,9 @@ function init_scenes()
   }
 
   scenes["PRE_CASTLE"] = {
-    irisd = 1,
-    irisi = 0,
     init = function(self)
+      self.irisd = 1
+      self.irisi = 0
       w.x = 8
       w.y = 60
     end,
@@ -324,19 +313,15 @@ function init_scenes()
   }
 
   scenes["CASTLE"] = {
-    map_x = 0,
-    background1_x = 0,
-    spawn_x = 0,
-    prev_spawn_x = 0,
-    abs_x = 0,
-    u = nil,
-
     init = function(self)
-      w:init()
-      curr_e = {}
       self.map_x = 0
       self.background1_x = 0
+      self.spawn_x = 0
+      self.prev_spawn_x = 0
+      self.abs_x = 0
       self.u = unhold()
+      curr_e = {}
+      w:init()
     end,
 
     update = function(self)
@@ -381,13 +366,9 @@ function init_scenes()
   }
 
   scenes["POST_CASTLE"] = {
-    sparks = {},
-    fireworks = {},
-    t,
-    curr_firework = 1,
     init = function(self)
       self.t = 0
-
+      self.curr_firework = 1
       self.fireworks = {
         {64, 64, 5, 200},
         {20, 35, 2, 200},
@@ -395,6 +376,7 @@ function init_scenes()
         {64, 33, 3, 100},
         {80, 88, 5, 200},
       }
+      self.sparks = {}
 
       for i=1,200 do
         local p = {
@@ -739,9 +721,7 @@ function init_enemies()
 
   all_e["CAVE"] = {
     [20] = {bat(25, 1.0)},
-    [23] = {bat(55, 1.0)},
     [30] = {bat(68, 0.6)},
-    [32] = {bat(77, 2.0)},
     [40] = {bat(10, 0.75)},
     [50] = {bat(33, 1.50)},
     [58] = {bat(13, 0.75)},
