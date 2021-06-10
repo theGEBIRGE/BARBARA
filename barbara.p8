@@ -21,12 +21,9 @@ function init_globals()
 
   ALL_MUSIC = {
     ["START"] = 0,
-    -- ["FOREST"] = 2,
-    -- ["CAVE"] = 16,
-    -- ["CASTLE"] = 48,
   }
 
-  MAX_HP = 10
+  MAX_HP = 6
 
   -- used for screen shake
   CAM_OFFSET = 0.5
@@ -57,7 +54,9 @@ function init_scenes()
   scenes["START"] = {
     init = function(self)
       self.ticks = 0
-      self.curr_star = 1
+      self.curr_star = {
+        x = 24, y = 14
+      }
       self.letters = {
         {spr = 67, x = 2}, -- B
         {spr = 69, x = 20}, -- A
