@@ -475,6 +475,9 @@ function init_scenes()
       sfx(16)
     end,
     update = function(self)
+      for i=0, 5 do
+        if (btn(i)) change_scene("START")
+      end
     end,
     draw = function(self)
       cls()
@@ -763,7 +766,6 @@ function init_enemies()
     [58] = {bat(13, 0.75)},
     [95] = {bat(55, 0.75)},
     [112] = {bat(12, 0.75)},
-    [120] = {bat(55, 2.75)},
     [124] = {bat(20, 1.75)},
     [155] = {bat(18, 1.0)},
     [177] = {bat(64, 1.0)},
