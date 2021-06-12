@@ -23,7 +23,7 @@ function init_globals()
     ["START"] = 0,
   }
 
-  MAX_HP = 6
+  MAX_HP = 3
 
   -- used for screen shake
   CAM_OFFSET = 0.5
@@ -39,7 +39,7 @@ function init_globals()
   F_COLLISION = 0
   F_DAMAGE = 1
 
-  SCROLL_SPEED = 0.5
+  SCROLL_SPEED = 1.0
 end
 
 function init_objects()
@@ -82,8 +82,8 @@ function init_scenes()
       w:sparks()
 
       self.map_x -= SCROLL_SPEED
-      self.background1_x -= 0.25
-      self.background2_x -= 0.1
+      self.background1_x -= 0.5
+      self.background2_x -= 0.2
       self.foreground_x -= SCROLL_SPEED
       -- the main map is 4 screens wide
       if (self.map_x < -128*4) self.map_x = 0
@@ -164,15 +164,15 @@ function init_scenes()
 
     ended = function(self)
       -- check if we reached the end of the forest
-      if (self.spawn_x == 216) change_scene("POST_FOREST")
+      if (self.spawn_x == 236) change_scene("POST_FOREST")
     end,
 
     update_map = function(self)
       self.map_x -= SCROLL_SPEED
       self.abs_x += SCROLL_SPEED
-      self.background1_x -= 0.25
-      self.background2_x -= 0.1
-      self.background3_x -= 0.05
+      self.background1_x -= 0.5
+      self.background2_x -= 0.2
+      self.background3_x -= 0.1
       self.foreground_x -= SCROLL_SPEED
       -- the main map is 4 screens wide
       if (self.map_x < -128*4) self.map_x = 0
@@ -539,7 +539,7 @@ function update_stage(self)
 end
 
 function init_gameloop()
-  _update60 = game_update
+  _update = game_update
   _draw = game_draw
 end
 
@@ -586,8 +586,8 @@ function init_witch()
     animate(self)
 
     local tmp_y = self.y
-    local accel = 0.3
-    local friction = 0.9
+    local accel = 0.8
+    local friction = 0.8
 
     if(btn(2)) then
       self.dy -= accel
@@ -668,7 +668,7 @@ function init_witch()
     SHOULD_SHAKE = true
     sfx(1)
     w.hp -= 1
-    w.iframes = 120
+    w.iframes = 100
     if (w.hp <= 0) then
       SHOULD_SHAKE = false
       sfx(11)
@@ -739,6 +739,7 @@ function init_enemies()
 
   all_e["FOREST"] = {
     [18] = {snake(0.5)},
+    [19] = {ghost(40)},
     [20] = {bird(25, 1.0)},
     [23] = {bird(55, 1.0), snake(1.0)},
     [30] = {bird(68, 0.6), snake(0.5)},
@@ -822,8 +823,8 @@ function update_unhold(self)
     local delta_x = self.x - 100
     local delta_y = self.y - 64
 
-    self.x -= delta_x / 100
-    self.y -= delta_y / 100
+    self.x -= delta_x / 50
+    self.y -= delta_y / 50
   end
 
   if (self.phase == "SPAWN_GHOSTS") then
@@ -833,7 +834,7 @@ function update_unhold(self)
       sfx(6)
       local y_ghost = rndb(10, 120)
       add(curr_e, ghost(y_ghost))
-      self.spawn_cooldown = 120
+      self.spawn_cooldown = 60
     end
 
     self.spin_speed = 0.01
@@ -851,16 +852,16 @@ function update_unhold(self)
   end
 
   if (self.phase == "HORIZONTAL") then
-    if (self.y < w.y) self.y += 1
-    if (self.y > w.y) self.y -= 1
+    if (self.y < w.y) self.y += 2
+    if (self.y > w.y) self.y -= 2
 
     if (time() - self.t > 3) self:next_phase()
   end
 
   if (self.phase == "LUNCH") then
     sfx(0)
-    self.dx += 0.05
-    self.dx = mid (0.05, self.dx, 1.5)
+    self.dx += 0.2
+    self.dx = mid (0.2, self.dx, 3.0)
     self.x -= self.dx
 
     if (self.x + 16 < 0) then
@@ -873,12 +874,12 @@ function update_unhold(self)
 
   if (self.phase == "BEATEN") then
     sfx(0)
-    self.dx += 0.1
+    self.dx += 0.2
     self.x -= self.dx
 
     if (self.x + 16 < 0) self.x = 144
 
-    if (flr(self.dx) == 50) then
+    if (flr(self.dx) == 30) then
       self.beaten = true
     end
   end
@@ -926,13 +927,13 @@ function unhold()
     ticks = 0,
     angle = 0.5,
     phase = "APPEAR",
-    spawn_cooldown = 140,
+    spawn_cooldown = 70,
     spin = true,
     spin_speed = 0,
     x = 106,
     y = 23,
-    dx = 1,
-    dy = 1,
+    dx = 2,
+    dy = 2,
     t = time(),
     beaten = false, -- has the boss been beaten yet?
     lunch_cnt = 0,
@@ -1001,7 +1002,7 @@ function bird(_y, _speed)
   return {
     tick = 0,
     frame = 1,
-    step = 6,
+    step = 3,
     sprites = {64, 65, 66},
     color = colors[i],
     base_y = _y,
@@ -1012,7 +1013,7 @@ function bird(_y, _speed)
     y_dir = "DOWN",
     sfx = 3,
     sound = make_sound,
-    speed = _speed,
+    speed = _speed * 2,
     update = update_bird,
     draw = draw_bird,
   }
@@ -1041,7 +1042,7 @@ function bat(_y, _speed)
     y = _y,
     sfx = 4,
     sound = make_sound,
-    speed = _speed,
+    speed = _speed * 2,
     update = update_bat,
     draw = draw_bat
   }
@@ -1068,7 +1069,7 @@ function snake(_speed)
     sprites = {96, 97, 98},
     x = 128,
     y = 96,
-    speed = _speed,
+    speed = _speed * 2,
     update = update_snake,
     draw = draw_snake
   }
@@ -1090,7 +1091,7 @@ function update_ghost(self)
 
   if (self.state == "NORMAL") then
     self.sprites = self.normal_sprites
-    if (flr(self.ticks / 60) == 1) self:next_state()
+    if (flr(self.ticks / 30) == 1) self:next_state()
   end
 
   animate(self)
@@ -1327,14 +1328,14 @@ ffffffffffffffff00000000000000000000000011100000111000000000000000000000ddd00000
 7bb0bb377bb0bb37bb0bb37700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 73b3333b73b3333b3b3333b700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 77bbbbb377bbbbb37bbbbb3700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777fff77777fff77777ffffffffffffffffffff7f77ff700000000000000000000000000000000000000000000000000000000000000000000000000000000
-777777ff777777ff777777fffffffffffff7ffff7ff7f77700000000000000000000000000000000000000000000000000000000000000000000000000000000
-070077ff070077ff070077fffffff7fff7fff7fff77f777f00000000000000000000000000000000000000000000000000000000000000000000000000000000
-7777777f0700777f777777fffff77fffff777fffff7777ff00000000000000000000000000000000000000000000000000000000000000000000000000000000
-7777777777777777777777fffff77ffffff777ff7f77777f00000000000000000000000000000000000000000000000000000000000000000000000000000000
-788e7777788e7777788e777fff7fffffff7f7ff777777ff700000000000000000000000000000000000000000000000000000000000000000000000000000000
-f7777777788e7777f7777777fffffffff7fff7fff7ff77ff00000000000000000000000000000000000000000000000000000000000000000000000000000000
-fff77777f7777777fff77777fffffffffff7ffff7ff7ff7f00000000000000000000000000000000000000000000000000000000000000000000000000000000
+fff77ffffff77ffffff77ffffffffffffffffffff7f77ff700000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff7777ffff7777ffff7777fffffffffffff7ffff7ff7f77700000000000000000000000000000000000000000000000000000000000000000000000000000000
+f07077fff07077fff07077fffffff7fff7fff7fff77f777f00000000000000000000000000000000000000000000000000000000000000000000000000000000
+f777777ff777777ff777777ffff77fffff777fffff7777ff00000000000000000000000000000000000000000000000000000000000000000000000000000000
+7777777f7777777ff7777777fff77ffffff777ff7f77777f00000000000000000000000000000000000000000000000000000000000000000000000000000000
+788e7777788e7777788e7777ff7fffffff7f7ff777777ff700000000000000000000000000000000000000000000000000000000000000000000000000000000
+77777777788e777777777777fffffffff7fff7fff7ff77ff00000000000000000000000000000000000000000000000000000000000000000000000000000000
+f7777777777777777777777ffffffffffff7ffff7ff7ff7f00000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000005500000000000000660000000888888888888b8883b888888cccccccccccccccc0000000000000000000000000000000000000aaaaaaa000000000000
 000000555500000000000066660000008888888188883888b3888888cc111c1111c111cc00000000000000000000000000000000000aaaaaaaaaaa0000000000
 00000555555000000000066666600000888888138183b3881b388888cc151115511151cc000000000000000000000000000000000aaaa777aaaaaaa600000000
