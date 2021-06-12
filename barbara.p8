@@ -725,7 +725,6 @@ function init_enemies()
 
   all_e["FOREST"] = {
     [18] = {snake(0.5)},
-    [19] = {ghost(40)},
     [20] = {bird(25, 1.0)},
     [23] = {bird(55, 1.0), snake(1.0)},
     [30] = {bird(68, 0.6), snake(0.5)},
