@@ -7,7 +7,7 @@ __lua__
 function _init()
   init_globals()
   init_objects()
-  change_scene("POST_CASTLE")
+  change_scene("CREDITS")
 end
 
 function init_globals()
@@ -411,9 +411,8 @@ function init_scenes()
       -- create an explosion every second.
       -- change scene if there are no more left.
       if(time() - self.t > 1) then
-        if (not self.fireworks
-        [self.curr_firework]) then
-          change_scene("START")
+        if (not self.fireworks[self.curr_firework]) then
+          change_scene("CREDITS")
           return
         end
         self:explode(unpack(self.fireworks[self.curr_firework]))
@@ -467,6 +466,30 @@ function init_scenes()
             end
           end
       end
+    end
+  }
+  scenes["CREDITS"] = {
+    init = function(self)
+      self.radii = {-10, -7.5, -5, -2.5, 0, 2.5, 5, 7.5, 10}
+      self.r = 0
+    end,
+    update = function(self)
+      for i=1, #self.radii do
+        local r = self.radii[i]
+        if (r > 64) then
+          r = 0
+        else
+          r += 0.5
+        end
+
+        self.radii[i] = r
+      end
+    end,
+    draw = function(self)
+      cls()
+      print("ALLES GUTE", 40, 50, 12)
+      print("CHARLOTTE UND JOHANNA", 20, 60, 14)
+      foreach(self.radii, function(r) circ(64, 64, r) end)
     end
   }
 end
