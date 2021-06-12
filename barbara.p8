@@ -7,7 +7,7 @@ __lua__
 function _init()
   init_globals()
   init_objects()
-  change_scene("CREDITS")
+  change_scene("START")
 end
 
 function init_globals()
@@ -477,7 +477,7 @@ function init_scenes()
     update = function(self)
     end,
     draw = function(self)
-      cls(0)
+      cls()
       pal(15, 0)
       map(32, 48, 0, 0, 16, 16)
       pal()
